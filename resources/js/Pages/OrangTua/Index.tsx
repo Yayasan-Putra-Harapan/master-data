@@ -33,17 +33,26 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/Components/ui/alert-dialog';
-import { Plus, Search, Edit2, Trash2, UserCheck, Phone, MapPin } from 'lucide-react';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/Components/ui/select';
+import { Plus, Search, Edit2, Trash2, UserCheck, Phone, MapPin, Download } from 'lucide-react';
 
 interface Props {
     orangTua: PaginatedData<OrangTua>;
     filters: {
         search?: string;
+        per_page?: string;
     };
 }
 
 export default function OrangTuaIndex({ orangTua, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '');
+    const [perPage, setPerPage] = useState(filters.per_page || '10');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingOrtu, setEditingOrtu] = useState<OrangTua | null>(null);
     const [deletingOrtu, setDeletingOrtu] = useState<OrangTua | null>(null);
@@ -57,15 +66,30 @@ export default function OrangTuaIndex({ orangTua, filters }: Props) {
         }
 
         const timer = setTimeout(() => {
-            router.get(
-                route('orang-tua.index'),
-                { search: search || undefined },
-                { preserveState: true, preserveScroll: true, replace: true }
-            );
+            applyFilter({ search: search || undefined });
         }, 300);
 
         return () => clearTimeout(timer);
     }, [search]);
+
+    const applyFilter = (params: Record<string, string | undefined>) => {
+        router.get(
+            route('orang-tua.index'),
+            {
+                search: search || undefined,
+                per_page: perPage !== '10' ? perPage : undefined,
+                ...params,
+            },
+            { preserveState: true, preserveScroll: true, replace: true }
+        );
+    };
+
+    const handleExport = () => {
+        const queryParams = new URLSearchParams();
+        if (search) queryParams.append('search', search);
+
+        window.location.href = `${route('orang-tua.export')}?${queryParams.toString()}`;
+    };
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         no_kk: '',
@@ -167,26 +191,58 @@ export default function OrangTuaIndex({ orangTua, filters }: Props) {
                             <CardTitle className="text-base font-semibold">
                                 Daftar Orang Tua & Wali Siswa
                             </CardTitle>
-                            <p className="text-xs text-neutral-500">
+                            <p className="text-xs text-muted-foreground">
                                 Kontak wali dan data keluarga untuk keperluan administrasi kesiswaan
                             </p>
                         </div>
-                        <Button onClick={openCreateModal} size="sm" className="gap-2">
-                            <Plus className="h-4 w-4" /> Tambah Orang Tua / Wali
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExport}
+                                className="gap-2"
+                            >
+                                <Download className="h-4 w-4" /> Ekspor CSV
+                            </Button>
+                            <Button onClick={openCreateModal} size="sm" className="gap-2">
+                                <Plus className="h-4 w-4" /> Tambah Orang Tua / Wali
+                            </Button>
+                        </div>
                     </CardHeader>
 
                     <CardContent className="space-y-4">
-                        {/* Search */}
-                        <form onSubmit={handleSearch} className="relative max-w-md">
-                            <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
-                            <Input
-                                placeholder="Cari nama orang tua, no KK, telepon..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-9"
-                            />
-                        </form>
+                        {/* Search & Per Page */}
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Cari nama orang tua, no KK, telepon..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="pl-9"
+                                />
+                            </div>
+
+                            <div className="w-full sm:w-36">
+                                <Select
+                                    value={perPage}
+                                    onValueChange={(val) => {
+                                        setPerPage(val);
+                                        applyFilter({ per_page: val !== '10' ? val : undefined });
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Tampilkan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10 Baris</SelectItem>
+                                        <SelectItem value="25">25 Baris</SelectItem>
+                                        <SelectItem value="50">50 Baris</SelectItem>
+                                        <SelectItem value="100">100 Baris</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
 
                         {/* Table */}
                         <div className="rounded-md border overflow-hidden">

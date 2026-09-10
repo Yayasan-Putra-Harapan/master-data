@@ -25,6 +25,13 @@ import {
     DialogTitle,
 } from '@/Components/ui/dialog';
 import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+} from '@/Components/ui/sheet';
+import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -41,7 +48,21 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/Components/ui/select';
-import { Plus, Search, Edit2, Trash2, GraduationCap } from 'lucide-react';
+import {
+    Plus,
+    Search,
+    Edit2,
+    Trash2,
+    GraduationCap,
+    Download,
+    Upload,
+    Eye,
+    FileSpreadsheet,
+    UserCheck,
+    Calendar,
+    MapPin,
+    School,
+} from 'lucide-react';
 
 interface Props {
     siswa: PaginatedData<Siswa>;
@@ -52,6 +73,7 @@ interface Props {
         unit_id?: string;
         status?: string;
         angkatan?: string;
+        per_page?: string;
     };
 }
 
@@ -59,9 +81,13 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
     const [search, setSearch] = useState(filters.search || '');
     const [unitFilter, setUnitFilter] = useState(filters.unit_id || 'all');
     const [statusFilter, setStatusFilter] = useState(filters.status || 'all');
+    const [perPage, setPerPage] = useState(filters.per_page || '10');
+
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isImportOpen, setIsImportOpen] = useState(false);
     const [editingSiswa, setEditingSiswa] = useState<Siswa | null>(null);
     const [deletingSiswa, setDeletingSiswa] = useState<Siswa | null>(null);
+    const [viewingSiswa, setViewingSiswa] = useState<Siswa | null>(null);
 
     const isInitialSearch = useRef(true);
 
@@ -72,15 +98,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
         }
 
         const timer = setTimeout(() => {
-            router.get(
-                route('siswa.index'),
-                {
-                    search: search || undefined,
-                    unit_id: unitFilter !== 'all' ? unitFilter : undefined,
-                    status: statusFilter !== 'all' ? statusFilter : undefined,
-                },
-                { preserveState: true, preserveScroll: true, replace: true }
-            );
+            applyFilter({ search: search || undefined });
         }, 300);
 
         return () => clearTimeout(timer);
@@ -105,10 +123,9 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
         status: 'aktif' as Siswa['status'],
     });
 
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        applyFilter({ search });
-    };
+    const importForm = useForm({
+        file: null as File | null,
+    });
 
     const applyFilter = (params: Record<string, string | undefined>) => {
         router.get(
@@ -117,9 +134,10 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                 search: search || undefined,
                 unit_id: unitFilter !== 'all' ? unitFilter : undefined,
                 status: statusFilter !== 'all' ? statusFilter : undefined,
+                per_page: perPage !== '10' ? perPage : undefined,
                 ...params,
             },
-            { preserveState: true, replace: true }
+            { preserveState: true, preserveScroll: true, replace: true }
         );
     };
 
@@ -168,6 +186,18 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
         }
     };
 
+    const handleImportSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!importForm.data.file) return;
+
+        importForm.post(route('siswa.import'), {
+            onSuccess: () => {
+                setIsImportOpen(false);
+                importForm.reset();
+            },
+        });
+    };
+
     const handleDelete = () => {
         if (!deletingSiswa) return;
         router.delete(route('siswa.destroy', deletingSiswa.id), {
@@ -175,10 +205,19 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
         });
     };
 
+    const handleExport = () => {
+        const queryParams = new URLSearchParams();
+        if (search) queryParams.append('search', search);
+        if (unitFilter !== 'all') queryParams.append('unit_id', unitFilter);
+        if (statusFilter !== 'all') queryParams.append('status', statusFilter);
+
+        window.location.href = `${route('siswa.export')}?${queryParams.toString()}`;
+    };
+
     const getStatusBadge = (status: Siswa['status']) => {
         switch (status) {
             case 'aktif':
-                return <Badge className="bg-emerald-500 hover:bg-emerald-600">Aktif</Badge>;
+                return <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">Aktif</Badge>;
             case 'lulus':
                 return <Badge variant="secondary">Lulus</Badge>;
             case 'mutasi':
@@ -192,8 +231,8 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
         <AuthenticatedLayout
             header={
                 <div className="flex items-center gap-2">
-                    <GraduationCap className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
-                    <h2 className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+                    <GraduationCap className="h-5 w-5 text-muted-foreground" />
+                    <h2 className="text-lg font-semibold tracking-tight text-foreground">
                         Master Data Siswa
                     </h2>
                 </div>
@@ -202,33 +241,51 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
             <Head title="Master Data Siswa" />
 
             <div className="space-y-6">
-                <Card className="shadow-sm">
+                <Card className="shadow-xs">
                     <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
                             <CardTitle className="text-base font-semibold">
                                 Buku Induk Siswa Terpusat
                             </CardTitle>
-                            <p className="text-xs text-neutral-500">
+                            <p className="text-xs text-muted-foreground">
                                 Single Source of Truth data siswa lintas jenjang PG, TK, SD, SMP, SMA, dan Boarding
                             </p>
                         </div>
-                        <Button onClick={openCreateModal} size="sm" className="gap-2">
-                            <Plus className="h-4 w-4" /> Registrasi Siswa
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExport}
+                                className="gap-2"
+                            >
+                                <Download className="h-4 w-4" /> Ekspor CSV
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsImportOpen(true)}
+                                className="gap-2"
+                            >
+                                <Upload className="h-4 w-4" /> Impor Masal
+                            </Button>
+                            <Button onClick={openCreateModal} size="sm" className="gap-2">
+                                <Plus className="h-4 w-4" /> Tambah Siswa
+                            </Button>
+                        </div>
                     </CardHeader>
 
                     <CardContent className="space-y-4">
                         {/* Search & Filters */}
                         <div className="flex flex-col sm:flex-row gap-3">
-                            <form onSubmit={handleSearch} className="relative flex-1">
-                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Cari NISN, NIK, NIS, nama siswa..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     className="pl-9"
                                 />
-                            </form>
+                            </div>
 
                             <div className="w-full sm:w-44">
                                 <Select
@@ -272,6 +329,26 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            <div className="w-full sm:w-32">
+                                <Select
+                                    value={perPage}
+                                    onValueChange={(val) => {
+                                        setPerPage(val);
+                                        applyFilter({ per_page: val !== '10' ? val : undefined });
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Tampilkan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10 Baris</SelectItem>
+                                        <SelectItem value="25">25 Baris</SelectItem>
+                                        <SelectItem value="50">50 Baris</SelectItem>
+                                        <SelectItem value="100">100 Baris</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
                         {/* Table */}
@@ -281,7 +358,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                     <TableRow>
                                         <TableHead>Identitas Siswa</TableHead>
                                         <TableHead>Unit</TableHead>
-                                        <TableHead>Angkatan</TableHead>
+                                        <TableHead className="text-center">Angkatan</TableHead>
                                         <TableHead>Tgl Lahir</TableHead>
                                         <TableHead>Orang Tua / Wali</TableHead>
                                         <TableHead>Status</TableHead>
@@ -291,7 +368,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                 <TableBody>
                                     {siswa.data.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center text-neutral-500">
+                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                                 Tidak ada data siswa ditemukan.
                                             </TableCell>
                                         </TableRow>
@@ -299,10 +376,10 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                         siswa.data.map((item) => (
                                             <TableRow key={item.id}>
                                                 <TableCell>
-                                                    <div className="font-medium text-neutral-900 dark:text-neutral-100">
+                                                    <div className="font-medium text-foreground">
                                                         {item.nama_lengkap} ({item.jenis_kelamin})
                                                     </div>
-                                                    <div className="text-[11px] text-neutral-500 font-mono">
+                                                    <div className="text-[11px] text-muted-foreground font-mono">
                                                         NISN: {item.nisn} {item.nis ? `• NIS: ${item.nis}` : ''}
                                                     </div>
                                                 </TableCell>
@@ -311,10 +388,10 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                                         {item.unit?.kode_unit || `Unit #${item.unit_id}`}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className="font-medium text-xs">
+                                                <TableCell className="text-center font-medium text-xs">
                                                     {item.angkatan}
                                                 </TableCell>
-                                                <TableCell className="text-xs text-neutral-600 dark:text-neutral-400">
+                                                <TableCell className="text-xs text-muted-foreground">
                                                     {item.tanggal_lahir ? item.tanggal_lahir.substring(0, 10) : '-'}
                                                 </TableCell>
                                                 <TableCell className="text-xs">
@@ -325,7 +402,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                                          '-'}
                                                     </div>
                                                     {item.orang_tua?.telepon && (
-                                                        <div className="text-[11px] text-neutral-400">
+                                                        <div className="text-[11px] text-muted-foreground">
                                                             {item.orang_tua.telepon}
                                                         </div>
                                                     )}
@@ -336,7 +413,16 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 text-neutral-600 hover:text-neutral-900"
+                                                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                                            title="Lihat Detail Profil"
+                                                            onClick={() => setViewingSiswa(item)}
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
                                                             onClick={() => openEditModal(item)}
                                                         >
                                                             <Edit2 className="h-4 w-4" />
@@ -344,7 +430,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 text-red-600 hover:text-red-700"
+                                                            className="h-8 w-8 text-destructive hover:text-destructive"
                                                             onClick={() => setDeletingSiswa(item)}
                                                         >
                                                             <Trash2 className="h-4 w-4" />
@@ -369,6 +455,174 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                 </Card>
             </div>
 
+            {/* Detail Sheet */}
+            <Sheet open={!!viewingSiswa} onOpenChange={() => setViewingSiswa(null)}>
+                <SheetContent className="overflow-y-auto sm:max-w-md">
+                    <SheetHeader>
+                        <div className="flex items-center gap-2">
+                            <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                                <GraduationCap className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <SheetTitle className="text-base">{viewingSiswa?.nama_lengkap}</SheetTitle>
+                                <SheetDescription className="text-xs">
+                                    NISN: {viewingSiswa?.nisn} {viewingSiswa?.nis ? `• NIS: ${viewingSiswa.nis}` : ''}
+                                </SheetDescription>
+                            </div>
+                        </div>
+                    </SheetHeader>
+
+                    {viewingSiswa && (
+                        <div className="space-y-4 py-4 text-sm">
+                            <div className="flex items-center justify-between rounded-lg bg-muted p-3">
+                                <div>
+                                    <div className="text-xs text-muted-foreground">Status Kesiswaan</div>
+                                    <div className="mt-0.5">{getStatusBadge(viewingSiswa.status)}</div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xs text-muted-foreground">Angkatan</div>
+                                    <div className="font-semibold text-foreground">{viewingSiswa.angkatan}</div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border p-3 space-y-2.5">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <School className="h-3.5 w-3.5" /> Unit Sekolah
+                                </div>
+                                <div className="text-foreground font-medium">
+                                    {viewingSiswa.unit?.nama_unit} ({viewingSiswa.unit?.jenjang})
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                    Kode: {viewingSiswa.unit?.kode_unit}
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border p-3 space-y-2.5">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <Calendar className="h-3.5 w-3.5" /> Biodata Siswa
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div>
+                                        <span className="text-muted-foreground">Jenis Kelamin:</span>
+                                        <div className="font-medium text-foreground">
+                                            {viewingSiswa.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span className="text-muted-foreground">Agama:</span>
+                                        <div className="font-medium text-foreground">{viewingSiswa.agama || 'Islam'}</div>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <span className="text-muted-foreground">Tempat, Tgl Lahir:</span>
+                                        <div className="font-medium text-foreground">
+                                            {viewingSiswa.tempat_lahir}, {viewingSiswa.tanggal_lahir ? viewingSiswa.tanggal_lahir.substring(0, 10) : '-'}
+                                        </div>
+                                    </div>
+                                    {viewingSiswa.nik && (
+                                        <div className="col-span-2">
+                                            <span className="text-muted-foreground">NIK KTP/Akta:</span>
+                                            <div className="font-mono font-medium text-foreground">{viewingSiswa.nik}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border p-3 space-y-2.5">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <MapPin className="h-3.5 w-3.5" /> Alamat Domisili
+                                </div>
+                                <div className="text-xs text-foreground leading-relaxed">
+                                    {viewingSiswa.alamat}
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border p-3 space-y-2.5">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <UserCheck className="h-3.5 w-3.5" /> Data Orang Tua / Wali
+                                </div>
+                                {viewingSiswa.orang_tua ? (
+                                    <div className="space-y-1.5 text-xs">
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Ayah:</span>
+                                            <span className="font-medium text-foreground">{viewingSiswa.orang_tua.nama_ayah || '-'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Ibu:</span>
+                                            <span className="font-medium text-foreground">{viewingSiswa.orang_tua.nama_ibu || '-'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Telepon/WA:</span>
+                                            <span className="font-medium text-foreground">{viewingSiswa.orang_tua.telepon}</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-xs text-muted-foreground italic">
+                                        Belum ditautkan dengan data orang tua/wali.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </SheetContent>
+            </Sheet>
+
+            {/* Import Dialog */}
+            <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Impor Data Siswa (Masal)</DialogTitle>
+                        <DialogDescription>
+                            Unggah berkas CSV data siswa sesuai format yang ditentukan.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleImportSubmit} className="space-y-4">
+                        <div className="rounded-lg border border-dashed p-4 text-center space-y-2">
+                            <FileSpreadsheet className="h-8 w-8 mx-auto text-muted-foreground" />
+                            <div className="text-xs text-muted-foreground">
+                                Format berkas harus berupa <span className="font-semibold text-foreground">.CSV</span>
+                            </div>
+                            <input
+                                type="file"
+                                accept=".csv,text/csv"
+                                onChange={(e) => importForm.setData('file', e.target.files?.[0] || null)}
+                                className="block w-full text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                            />
+                            {importForm.errors.file && (
+                                <p className="text-xs text-destructive">{importForm.errors.file}</p>
+                            )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs pt-1">
+                            <span className="text-muted-foreground">Belum punya format?</span>
+                            <a
+                                href={route('siswa.template')}
+                                download
+                                className="font-medium text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                                <Download className="h-3.5 w-3.5" /> Unduh Template CSV
+                            </a>
+                        </div>
+
+                        <DialogFooter className="pt-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsImportOpen(false)}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={!importForm.data.file || importForm.processing}
+                            >
+                                {importForm.processing ? 'Mengimpor...' : 'Mulai Impor'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
             {/* Create/Edit Form Dialog */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                 <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
@@ -377,7 +631,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                             {editingSiswa ? 'Ubah Data Siswa' : 'Registrasi Siswa Baru'}
                         </DialogTitle>
                         <DialogDescription>
-                            Validasi otomatis 5 dimensi kualitas data: NISN 10 digit, keabsahan usia logis terhadap jenjang sekolah.
+                            Isi formulir biodata siswa secara lengkap untuk buku induk yayasan.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -392,7 +646,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                     value={data.nisn}
                                     onChange={(e) => setData('nisn', e.target.value)}
                                 />
-                                {errors.nisn && <p className="text-xs text-red-500">{errors.nisn}</p>}
+                                {errors.nisn && <p className="text-xs text-destructive">{errors.nisn}</p>}
                             </div>
                             <div className="space-y-1">
                                 <Label htmlFor="nis">NIS Sekolah</Label>
@@ -402,7 +656,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                     value={data.nis}
                                     onChange={(e) => setData('nis', e.target.value)}
                                 />
-                                {errors.nis && <p className="text-xs text-red-500">{errors.nis}</p>}
+                                {errors.nis && <p className="text-xs text-destructive">{errors.nis}</p>}
                             </div>
                         </div>
 
@@ -416,7 +670,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                     onChange={(e) => setData('nama_lengkap', e.target.value)}
                                 />
                                 {errors.nama_lengkap && (
-                                    <p className="text-xs text-red-500">{errors.nama_lengkap}</p>
+                                    <p className="text-xs text-destructive">{errors.nama_lengkap}</p>
                                 )}
                             </div>
                             <div className="space-y-1">
@@ -455,7 +709,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                     </SelectContent>
                                 </Select>
                                 {errors.unit_id && (
-                                    <p className="text-xs text-red-500">{errors.unit_id}</p>
+                                    <p className="text-xs text-destructive">{errors.unit_id}</p>
                                 )}
                             </div>
 
@@ -468,7 +722,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                     onChange={(e) => setData('angkatan', parseInt(e.target.value) || currentYear)}
                                 />
                                 {errors.angkatan && (
-                                    <p className="text-xs text-red-500">{errors.angkatan}</p>
+                                    <p className="text-xs text-destructive">{errors.angkatan}</p>
                                 )}
                             </div>
                         </div>
@@ -483,7 +737,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                     onChange={(e) => setData('tempat_lahir', e.target.value)}
                                 />
                                 {errors.tempat_lahir && (
-                                    <p className="text-xs text-red-500">{errors.tempat_lahir}</p>
+                                    <p className="text-xs text-destructive">{errors.tempat_lahir}</p>
                                 )}
                             </div>
                             <div className="space-y-1">
@@ -495,7 +749,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                     onChange={(e) => setData('tanggal_lahir', e.target.value)}
                                 />
                                 {errors.tanggal_lahir && (
-                                    <p className="text-xs text-red-500">{errors.tanggal_lahir}</p>
+                                    <p className="text-xs text-destructive">{errors.tanggal_lahir}</p>
                                 )}
                             </div>
                         </div>
@@ -519,9 +773,6 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {errors.orang_tua_id && (
-                                    <p className="text-xs text-red-500">{errors.orang_tua_id}</p>
-                                )}
                             </div>
 
                             <div className="space-y-1">
@@ -552,7 +803,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                 onChange={(e) => setData('alamat', e.target.value)}
                             />
                             {errors.alamat && (
-                                <p className="text-xs text-red-500">{errors.alamat}</p>
+                                <p className="text-xs text-destructive">{errors.alamat}</p>
                             )}
                         </div>
 
@@ -579,17 +830,17 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                         <AlertDialogTitle>Hapus Data Siswa?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Tindakan ini akan menghapus data siswa{' '}
-                            <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+                            <span className="font-semibold text-foreground">
                                 {deletingSiswa?.nama_lengkap} (NISN: {deletingSiswa?.nisn})
                             </span>
-                            . Data riwayat akademik yang terhubung akan terhapus.
+                            .
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Batal</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
                             Hapus
                         </AlertDialogAction>

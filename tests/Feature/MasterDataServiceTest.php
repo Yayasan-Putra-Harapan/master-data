@@ -180,3 +180,69 @@ test('api can fetch all increment 2 endpoints listing', function () {
     $this->getJson('/api/v1/mata-pelajaran')->assertStatus(200)->assertJsonStructure(['data']);
     $this->getJson('/api/v1/vendor')->assertStatus(200)->assertJsonStructure(['data']);
 });
+
+// Master Data Bulk Import & Export Tests
+test('authenticated user can export siswa to csv', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/siswa/export');
+
+    $response->assertStatus(200)
+        ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+});
+
+test('authenticated user can download siswa import template', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/siswa/template');
+
+    $response->assertStatus(200)
+        ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+});
+
+test('authenticated user can export karyawan to csv', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/karyawan/export');
+
+    $response->assertStatus(200)
+        ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+});
+
+test('authenticated user can download karyawan import template', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/karyawan/template');
+
+    $response->assertStatus(200)
+        ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+});
+
+test('authenticated user can export orang tua to csv', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/orang-tua/export');
+
+    $response->assertStatus(200)
+        ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+});
+
+test('authenticated user can import siswa from valid csv', function () {
+    $user = User::factory()->create();
+    $unit = Unit::first() ?? Unit::factory()->create(['kode_unit' => 'SD']);
+
+    $csvContent = "nisn,nis,nik,nama_lengkap,nama_panggilan,jenis_kelamin,tempat_lahir,tanggal_lahir,agama,kode_unit,alamat,angkatan,status\n";
+    $csvContent .= "0011223344,20251111,3302010101159999,Siswa Impor Uji,Uji,L,Purwokerto,2015-01-01,Islam,{$unit->kode_unit},Jl. Raya No. 1,2025,aktif\n";
+
+    $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('siswa_test.csv', $csvContent);
+
+    $response = $this->actingAs($user)->post('/siswa/import', [
+        'file' => $file,
+    ]);
+
+    $response->assertRedirect('/siswa');
+    $this->assertDatabaseHas('siswa', [
+        'nisn' => '0011223344',
+        'nama_lengkap' => 'Siswa Impor Uji',
+    ]);
+});

@@ -26,9 +26,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // MDM Core Entities (Increment 1)
     Route::resource('units', UnitController::class)->except(['create', 'edit', 'show']);
-    Route::resource('orang-tua', OrangTuaController::class)->except(['create', 'edit', 'show']);
-    Route::resource('karyawan', KaryawanController::class)->except(['create', 'edit', 'show']);
+
+    // Siswa Bulk Import & Export
+    Route::get('siswa/export', [SiswaController::class, 'export'])->name('siswa.export');
+    Route::get('siswa/template', [SiswaController::class, 'template'])->name('siswa.template');
+    Route::post('siswa/import', [SiswaController::class, 'import'])->name('siswa.import');
     Route::resource('siswa', SiswaController::class)->except(['create', 'edit', 'show']);
+
+    // Karyawan Bulk Import & Export
+    Route::get('karyawan/export', [KaryawanController::class, 'export'])->name('karyawan.export');
+    Route::get('karyawan/template', [KaryawanController::class, 'template'])->name('karyawan.template');
+    Route::post('karyawan/import', [KaryawanController::class, 'import'])->name('karyawan.import');
+    Route::resource('karyawan', KaryawanController::class)->except(['create', 'edit', 'show']);
+
+    // Orang Tua Export
+    Route::get('orang-tua/export', [OrangTuaController::class, 'export'])->name('orang-tua.export');
+    Route::resource('orang-tua', OrangTuaController::class)->except(['create', 'edit', 'show']);
 
     // MDM Extension Entities (Increment 2)
     Route::resource('tahun-ajaran', TahunAjaranController::class)->except(['create', 'edit', 'show']);
