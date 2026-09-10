@@ -1,48 +1,36 @@
-import { useEffect, useState } from 'react';
-import { Button } from '@/Components/ui/button';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from "lucide-react"
+import { Button } from "@/Components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/Components/ui/dropdown-menu"
+import { useTheme } from "@/Components/theme-provider"
 
 export default function ThemeToggle() {
-    const [isDark, setIsDark] = useState<boolean>(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('theme');
-            if (saved) {
-                return saved === 'dark';
-            }
-            return window.matchMedia('(prefers-color-scheme: dark)').matches;
-        }
-        return false;
-    });
+  const { setTheme } = useTheme()
 
-    useEffect(() => {
-        const root = document.documentElement;
-        if (isDark) {
-            root.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            root.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
-    }, [isDark]);
-
-    const toggleTheme = () => {
-        setIsDark((prev) => !prev);
-    };
-
-    return (
-        <Button
-            variant="outline"
-            size="icon"
-            onClick={toggleTheme}
-            className="h-9 w-9 cursor-pointer"
-            title={isDark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap'}
-        >
-            {isDark ? (
-                <Sun className="h-4 w-4 transition-transform rotate-0" />
-            ) : (
-                <Moon className="h-4 w-4 transition-transform rotate-0" />
-            )}
-            <span className="sr-only">Toggle theme</span>
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="icon" className="h-9 w-9 relative">
+          <Sun className="h-[1.1rem] w-[1.1rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+          <Moon className="absolute h-[1.1rem] w-[1.1rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+          <span className="sr-only">Toggle theme</span>
         </Button>
-    );
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => setTheme("light")}>
+          Mode Terang
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("dark")}>
+          Mode Gelap
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("system")}>
+          Ikuti Sistem
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }
