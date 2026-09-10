@@ -64,6 +64,7 @@ import {
     MapPin,
     School,
     Calendar,
+    Printer,
 } from 'lucide-react';
 
 interface Props {
@@ -407,6 +408,20 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
                                                         >
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
+                                                        <a
+                                                            href={route('karyawan.cetak', item.id)}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                        >
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                                                title="Cetak Biodata Pegawai"
+                                                            >
+                                                                <Printer className="h-4 w-4" />
+                                                            </Button>
+                                                        </a>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -557,6 +572,19 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
                                         </div>
                                     )}
                                 </div>
+                            </div>
+
+                            <div className="pt-2">
+                                <a
+                                    href={route('karyawan.cetak', viewingKaryawan.id)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="block"
+                                >
+                                    <Button variant="outline" className="w-full gap-2 cursor-pointer">
+                                        <Printer className="h-4 w-4" /> Cetak Biodata Pegawai (PDF)
+                                    </Button>
+                                </a>
                             </div>
                         </div>
                     )}

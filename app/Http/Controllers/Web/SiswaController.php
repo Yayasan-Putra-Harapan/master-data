@@ -93,4 +93,17 @@ class SiswaController extends Controller
 
         return redirect()->route('siswa.index')->with('success', $msg);
     }
+
+    public function cetak(Siswa $siswa): Response
+    {
+        $siswa->load([
+            'unit',
+            'orangTua',
+            'anggotaKelas' => fn($q) => $q->with(['kelas', 'tahunAjaran'])->where('status', 'aktif')
+        ]);
+
+        return Inertia::render('Siswa/Cetak', [
+            'siswa' => $siswa,
+        ]);
+    }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AnggotaKelasApiController;
 use App\Http\Controllers\Api\V1\BangunanApiController;
 use App\Http\Controllers\Api\V1\DataQualityApiController;
 use App\Http\Controllers\Api\V1\KaryawanApiController;
@@ -22,6 +23,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
     // Increment 2
     Route::apiResource('tahun-ajaran', TahunAjaranApiController::class);
+    Route::get('kelas/{kelas}/siswa', [AnggotaKelasApiController::class, 'index'])->name('kelas.siswa.index');
+    Route::post('kelas/{kelas}/siswa', [AnggotaKelasApiController::class, 'store'])->name('kelas.siswa.store');
+    Route::delete('kelas/{kelas}/siswa/{siswa}', [AnggotaKelasApiController::class, 'destroy'])->name('kelas.siswa.destroy');
+    Route::post('kelas/{kelas}/transfer', [AnggotaKelasApiController::class, 'transfer'])->name('kelas.siswa.transfer');
     Route::apiResource('kelas', KelasApiController::class);
     Route::apiResource('bangunan', BangunanApiController::class);
     Route::apiResource('ruang', RuangApiController::class);

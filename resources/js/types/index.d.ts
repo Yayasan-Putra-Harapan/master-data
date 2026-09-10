@@ -154,6 +154,19 @@ export interface Vendor {
     status: 'aktif' | 'non_aktif';
 }
 
+export interface AnggotaKelas {
+    id: number;
+    siswa_id: number;
+    siswa?: Siswa;
+    kelas_id: number;
+    kelas?: Kelas;
+    tahun_ajaran_id: number;
+    tahun_ajaran?: TahunAjaran;
+    tanggal_masuk: string;
+    status: 'aktif' | 'pindah' | 'keluar';
+    keterangan?: string;
+}
+
 export interface PaginatedData<T> {
     data: T[];
     current_page: number;

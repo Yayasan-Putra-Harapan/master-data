@@ -246,3 +246,177 @@ test('authenticated user can import siswa from valid csv', function () {
         'nama_lengkap' => 'Siswa Impor Uji',
     ]);
 });
+
+test('authenticated user can export and import kelas', function () {
+    $user = User::factory()->create();
+    $unit = Unit::first() ?? Unit::factory()->create(['kode_unit' => 'SD']);
+    $ta = \App\Models\TahunAjaran::first() ?? \App\Models\TahunAjaran::factory()->create();
+
+    $this->actingAs($user)->get('/kelas/export')->assertStatus(200)->assertHeader('content-type', 'text/csv; charset=UTF-8');
+    $this->actingAs($user)->get('/kelas/template')->assertStatus(200)->assertHeader('content-type', 'text/csv; charset=UTF-8');
+
+    $csv = "kode_kelas,nama_kelas,tingkat,kode_unit,kode_tahun_ajaran,nip_wali_kelas,kapasitas\n";
+    $csv .= "KLS-TEST-1X,Kelas 1X Test,1,{$unit->kode_unit},{$ta->kode},,30\n";
+    $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('kelas_test.csv', $csv);
+
+    $this->actingAs($user)->post('/kelas/import', ['file' => $file])->assertRedirect('/kelas');
+    $this->assertDatabaseHas('kelas', ['kode_kelas' => 'KLS-TEST-1X']);
+});
+
+test('authenticated user can export and import mata pelajaran', function () {
+    $user = User::factory()->create();
+    $unit = Unit::first() ?? Unit::factory()->create(['kode_unit' => 'SD']);
+
+    $this->actingAs($user)->get('/mata-pelajaran/export')->assertStatus(200);
+    $this->actingAs($user)->get('/mata-pelajaran/template')->assertStatus(200);
+
+    $csv = "kode_mapel,nama_mapel,kode_unit,kelompok,beban_jam,keterangan\n";
+    $csv .= "MAPEL-TEST,Mapel Test Impor,{$unit->kode_unit},wajib,2,Kurikulum Test\n";
+    $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('mapel_test.csv', $csv);
+
+    $this->actingAs($user)->post('/mata-pelajaran/import', ['file' => $file])->assertRedirect('/mata-pelajaran');
+    $this->assertDatabaseHas('mata_pelajaran', ['kode_mapel' => 'MAPEL-TEST']);
+});
+
+test('authenticated user can export and import bangunan', function () {
+    $user = User::factory()->create();
+    $unit = Unit::first() ?? Unit::factory()->create(['kode_unit' => 'SD']);
+
+    $this->actingAs($user)->get('/bangunan/export')->assertStatus(200);
+    $this->actingAs($user)->get('/bangunan/template')->assertStatus(200);
+
+    $csv = "kode_bangunan,nama_bangunan,kode_unit,jumlah_lantai,luas,kondisi,keterangan\n";
+    $csv .= "GDG-TEST-1,Gedung Uji Impor,{$unit->kode_unit},2,500,baik,Catatan Uji\n";
+    $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('bangunan_test.csv', $csv);
+
+    $this->actingAs($user)->post('/bangunan/import', ['file' => $file])->assertRedirect('/bangunan');
+    $this->assertDatabaseHas('bangunan', ['kode_bangunan' => 'GDG-TEST-1']);
+});
+
+test('authenticated user can export and import ruang', function () {
+    $user = User::factory()->create();
+    $bangunan = \App\Models\Bangunan::first() ?? \App\Models\Bangunan::factory()->create();
+
+    $this->actingAs($user)->get('/ruang/export')->assertStatus(200);
+    $this->actingAs($user)->get('/ruang/template')->assertStatus(200);
+
+    $csv = "kode_ruang,nama_ruang,kode_bangunan,lantai,fungsi,kapasitas,kondisi,keterangan\n";
+    $csv .= "R-TEST-99,Ruang Uji Impor,{$bangunan->kode_bangunan},1,kelas,30,baik,Uji Fasilitas\n";
+    $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('ruang_test.csv', $csv);
+
+    $this->actingAs($user)->post('/ruang/import', ['file' => $file])->assertRedirect('/ruang');
+    $this->assertDatabaseHas('ruang', ['kode_ruang' => 'R-TEST-99']);
+});
+
+test('authenticated user can export and import vendor', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get('/vendor/export')->assertStatus(200);
+    $this->actingAs($user)->get('/vendor/template')->assertStatus(200);
+
+    $csv = "kode_vendor,nama_vendor,kategori,nama_kontak,telepon,email,alamat,status\n";
+    $csv .= "VND-TEST-9,Vendor Test Impor,teknologi,Agus,081234567890,agus@test.com,Jl. Uji,aktif\n";
+    $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('vendor_test.csv', $csv);
+
+    $this->actingAs($user)->post('/vendor/import', ['file' => $file])->assertRedirect('/vendor');
+    $this->assertDatabaseHas('vendor', ['kode_vendor' => 'VND-TEST-9']);
+});
+
+// Anggota Rombel / Penempatan Kelas Tests
+test('authenticated user can view kelas anggota web page via inertia', function () {
+    $user = User::factory()->create();
+    $kelas = \App\Models\Kelas::first() ?? \App\Models\Kelas::factory()->create();
+
+    $response = $this->actingAs($user)->get("/kelas/{$kelas->id}/anggota");
+
+    $response->assertStatus(200);
+});
+
+test('authenticated user can plot students into a class', function () {
+    $user = User::factory()->create();
+    $kelas = \App\Models\Kelas::first() ?? \App\Models\Kelas::factory()->create();
+    $siswa = \App\Models\Siswa::factory()->create(['unit_id' => $kelas->unit_id]);
+
+    $response = $this->actingAs($user)->post("/kelas/{$kelas->id}/anggota", [
+        'siswa_ids' => [$siswa->id],
+        'tanggal_masuk' => now()->format('Y-m-d'),
+        'keterangan' => 'Uji coba plotting',
+    ]);
+
+    $response->assertRedirect("/kelas/{$kelas->id}/anggota");
+    $this->assertDatabaseHas('anggota_kelas', [
+        'kelas_id' => $kelas->id,
+        'siswa_id' => $siswa->id,
+        'status' => 'aktif',
+    ]);
+});
+
+test('api can fetch students enrolled in a class', function () {
+    $kelas = \App\Models\Kelas::first() ?? \App\Models\Kelas::factory()->create();
+
+    $response = $this->getJson("/api/v1/kelas/{$kelas->id}/siswa");
+
+    $response->assertStatus(200)
+        ->assertJsonStructure(['data']);
+});
+
+test('api can enroll student to a class and remove them', function () {
+    $kelas = \App\Models\Kelas::first() ?? \App\Models\Kelas::factory()->create();
+    $siswa = \App\Models\Siswa::factory()->create(['unit_id' => $kelas->unit_id]);
+
+    // Enroll
+    $enrollResponse = $this->postJson("/api/v1/kelas/{$kelas->id}/siswa", [
+        'siswa_ids' => [$siswa->id],
+    ]);
+    $enrollResponse->assertStatus(201);
+
+    // Remove
+    $removeResponse = $this->deleteJson("/api/v1/kelas/{$kelas->id}/siswa/{$siswa->id}");
+    $removeResponse->assertStatus(200);
+});
+
+// REST API Documentation (OpenAPI / Swagger via Scramble) Tests
+test('openapi json specification endpoint is accessible and valid', function () {
+    $response = $this->get('/docs/api.json');
+
+    $response->assertStatus(200)
+        ->assertJsonStructure([
+            'openapi',
+            'info' => ['title', 'version'],
+            'paths',
+        ]);
+});
+
+test('interactive api documentation ui endpoint is accessible', function () {
+    $response = $this->get('/docs/api');
+
+    $response->assertStatus(200);
+});
+
+// Print / PDF Official Documents Tests
+test('authenticated user can view cetak buku induk siswa document', function () {
+    $user = User::factory()->create();
+    $siswa = \App\Models\Siswa::first() ?? \App\Models\Siswa::factory()->create();
+
+    $response = $this->actingAs($user)->get("/siswa/{$siswa->id}/cetak");
+
+    $response->assertStatus(200);
+});
+
+test('authenticated user can view cetak biodata karyawan document', function () {
+    $user = User::factory()->create();
+    $karyawan = \App\Models\Karyawan::first() ?? \App\Models\Karyawan::factory()->create();
+
+    $response = $this->actingAs($user)->get("/karyawan/{$karyawan->id}/cetak");
+
+    $response->assertStatus(200);
+});
+
+test('authenticated user can view cetak presensi rombel kelas document', function () {
+    $user = User::factory()->create();
+    $kelas = \App\Models\Kelas::first() ?? \App\Models\Kelas::factory()->create();
+
+    $response = $this->actingAs($user)->get("/kelas/{$kelas->id}/cetak");
+
+    $response->assertStatus(200);
+});

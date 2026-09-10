@@ -90,4 +90,13 @@ class KaryawanController extends Controller
 
         return redirect()->route('karyawan.index')->with('success', $msg);
     }
+
+    public function cetak(Karyawan $karyawan): Response
+    {
+        $karyawan->load('unit');
+
+        return Inertia::render('Karyawan/Cetak', [
+            'karyawan' => $karyawan,
+        ]);
+    }
 }

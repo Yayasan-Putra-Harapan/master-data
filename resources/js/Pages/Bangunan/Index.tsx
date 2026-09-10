@@ -41,7 +41,16 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/Components/ui/select';
-import { Plus, Search, Edit2, Trash2, Building } from 'lucide-react';
+import {
+    Plus,
+    Search,
+    Edit2,
+    Trash2,
+    Building,
+    Download,
+    Upload,
+    FileSpreadsheet,
+} from 'lucide-react';
 
 interface Props {
     bangunan: PaginatedData<Bangunan>;
@@ -50,6 +59,7 @@ interface Props {
         search?: string;
         unit_id?: string;
         kondisi?: string;
+        per_page?: string;
     };
 }
 
@@ -57,7 +67,10 @@ export default function BangunanIndex({ bangunan, units, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [unitFilter, setUnitFilter] = useState(filters.unit_id || 'all');
     const [kondisiFilter, setKondisiFilter] = useState(filters.kondisi || 'all');
+    const [perPage, setPerPage] = useState(filters.per_page || '10');
+
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isImportOpen, setIsImportOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Bangunan | null>(null);
     const [deletingItem, setDeletingItem] = useState<Bangunan | null>(null);
 
@@ -70,15 +83,7 @@ export default function BangunanIndex({ bangunan, units, filters }: Props) {
         }
 
         const timer = setTimeout(() => {
-            router.get(
-                route('bangunan.index'),
-                {
-                    search: search || undefined,
-                    unit_id: unitFilter !== 'all' ? unitFilter : undefined,
-                    kondisi: kondisiFilter !== 'all' ? kondisiFilter : undefined,
-                },
-                { preserveState: true, preserveScroll: true, replace: true }
-            );
+            applyFilter({ search: search || undefined });
         }, 300);
 
         return () => clearTimeout(timer);
@@ -94,6 +99,10 @@ export default function BangunanIndex({ bangunan, units, filters }: Props) {
         keterangan: '',
     });
 
+    const importForm = useForm({
+        file: null as File | null,
+    });
+
     const applyFilter = (params: Record<string, string | undefined>) => {
         router.get(
             route('bangunan.index'),
@@ -101,9 +110,10 @@ export default function BangunanIndex({ bangunan, units, filters }: Props) {
                 search: search || undefined,
                 unit_id: unitFilter !== 'all' ? unitFilter : undefined,
                 kondisi: kondisiFilter !== 'all' ? kondisiFilter : undefined,
+                per_page: perPage !== '10' ? perPage : undefined,
                 ...params,
             },
-            { preserveState: true, replace: true }
+            { preserveState: true, preserveScroll: true, replace: true }
         );
     };
 
@@ -145,11 +155,32 @@ export default function BangunanIndex({ bangunan, units, filters }: Props) {
         }
     };
 
+    const handleImportSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!importForm.data.file) return;
+
+        importForm.post(route('bangunan.import'), {
+            onSuccess: () => {
+                setIsImportOpen(false);
+                importForm.reset();
+            },
+        });
+    };
+
     const handleDelete = () => {
         if (!deletingItem) return;
         router.delete(route('bangunan.destroy', deletingItem.id), {
             onSuccess: () => setDeletingItem(null),
         });
+    };
+
+    const handleExport = () => {
+        const queryParams = new URLSearchParams();
+        if (search) queryParams.append('search', search);
+        if (unitFilter !== 'all') queryParams.append('unit_id', unitFilter);
+        if (kondisiFilter !== 'all') queryParams.append('kondisi', kondisiFilter);
+
+        window.location.href = `${route('bangunan.export')}?${queryParams.toString()}`;
     };
 
     const getKondisiBadge = (kondisi: Bangunan['kondisi']) => {
@@ -187,9 +218,27 @@ export default function BangunanIndex({ bangunan, units, filters }: Props) {
                                 Data sarana gedung per unit satuan pendidikan yayasan
                             </p>
                         </div>
-                        <Button onClick={openCreateModal} size="sm" className="gap-2">
-                            <Plus className="h-4 w-4" /> Tambah Bangunan
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExport}
+                                className="gap-2"
+                            >
+                                <Download className="h-4 w-4" /> Ekspor CSV
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsImportOpen(true)}
+                                className="gap-2"
+                            >
+                                <Upload className="h-4 w-4" /> Impor Masal
+                            </Button>
+                            <Button onClick={openCreateModal} size="sm" className="gap-2">
+                                <Plus className="h-4 w-4" /> Tambah Bangunan
+                            </Button>
+                        </div>
                     </CardHeader>
 
                     <CardContent className="space-y-4">
@@ -243,6 +292,26 @@ export default function BangunanIndex({ bangunan, units, filters }: Props) {
                                         <SelectItem value="baik">Baik</SelectItem>
                                         <SelectItem value="rusak_ringan">Rusak Ringan</SelectItem>
                                         <SelectItem value="rusak_berat">Rusak Berat</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="w-full sm:w-32">
+                                <Select
+                                    value={perPage}
+                                    onValueChange={(val) => {
+                                        setPerPage(val);
+                                        applyFilter({ per_page: val !== '10' ? val : undefined });
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Tampilkan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10 Baris</SelectItem>
+                                        <SelectItem value="25">25 Baris</SelectItem>
+                                        <SelectItem value="50">50 Baris</SelectItem>
+                                        <SelectItem value="100">100 Baris</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -336,6 +405,63 @@ export default function BangunanIndex({ bangunan, units, filters }: Props) {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Import Dialog */}
+            <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Impor Data Bangunan (Masal)</DialogTitle>
+                        <DialogDescription>
+                            Unggah berkas CSV inventaris bangunan/gedung sesuai template.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleImportSubmit} className="space-y-4">
+                        <div className="rounded-lg border border-dashed p-4 text-center space-y-2">
+                            <FileSpreadsheet className="h-8 w-8 mx-auto text-muted-foreground" />
+                            <div className="text-xs text-muted-foreground">
+                                Format berkas harus berupa <span className="font-semibold text-foreground">.CSV</span>
+                            </div>
+                            <input
+                                type="file"
+                                accept=".csv,text/csv"
+                                onChange={(e) => importForm.setData('file', e.target.files?.[0] || null)}
+                                className="block w-full text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                            />
+                            {importForm.errors.file && (
+                                <p className="text-xs text-destructive">{importForm.errors.file}</p>
+                            )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs pt-1">
+                            <span className="text-muted-foreground">Belum punya format?</span>
+                            <a
+                                href={route('bangunan.template')}
+                                download
+                                className="font-medium text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                                <Download className="h-3.5 w-3.5" /> Unduh Template CSV
+                            </a>
+                        </div>
+
+                        <DialogFooter className="pt-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsImportOpen(false)}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={!importForm.data.file || importForm.processing}
+                            >
+                                {importForm.processing ? 'Mengimpor...' : 'Mulai Impor'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* Dialog Form */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>

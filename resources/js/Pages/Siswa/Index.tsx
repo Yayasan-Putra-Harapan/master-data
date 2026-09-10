@@ -62,6 +62,7 @@ import {
     Calendar,
     MapPin,
     School,
+    Printer,
 } from 'lucide-react';
 
 interface Props {
@@ -419,6 +420,20 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                                         >
                                                             <Eye className="h-4 w-4" />
                                                         </Button>
+                                                        <a
+                                                            href={route('siswa.cetak', item.id)}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                        >
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                                                title="Cetak Lembar Buku Induk"
+                                                            >
+                                                                <Printer className="h-4 w-4" />
+                                                            </Button>
+                                                        </a>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -560,6 +575,19 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                         Belum ditautkan dengan data orang tua/wali.
                                     </div>
                                 )}
+                            </div>
+
+                            <div className="pt-2">
+                                <a
+                                    href={route('siswa.cetak', viewingSiswa.id)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="block"
+                                >
+                                    <Button variant="outline" className="w-full gap-2 cursor-pointer">
+                                        <Printer className="h-4 w-4" /> Cetak Buku Induk Siswa (PDF)
+                                    </Button>
+                                </a>
                             </div>
                         </div>
                     )}

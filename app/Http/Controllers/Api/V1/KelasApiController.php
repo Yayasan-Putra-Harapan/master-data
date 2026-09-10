@@ -33,21 +33,21 @@ class KelasApiController extends Controller
             ->setStatusCode(201);
     }
 
-    public function show(Kelas $kela): KelasResource
+    public function show(Kelas $kelas): KelasResource
     {
-        return new KelasResource($kela->load(['unit', 'tahunAjaran', 'waliKelas']));
+        return new KelasResource($kelas->load(['unit', 'tahunAjaran', 'waliKelas']));
     }
 
-    public function update(KelasRequest $request, Kelas $kela): KelasResource
+    public function update(KelasRequest $request, Kelas $kelas): KelasResource
     {
-        $updated = $this->service->update($kela, $request->validated());
+        $updated = $this->service->update($kelas, $request->validated());
 
         return new KelasResource($updated->load(['unit', 'tahunAjaran', 'waliKelas']));
     }
 
-    public function destroy(Kelas $kela): JsonResponse
+    public function destroy(Kelas $kelas): JsonResponse
     {
-        $this->service->delete($kela);
+        $this->service->delete($kelas);
 
         return response()->json(['message' => 'Kelas deleted successfully'], 200);
     }

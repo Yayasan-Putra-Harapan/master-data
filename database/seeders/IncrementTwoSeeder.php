@@ -2,11 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Models\AnggotaKelas;
 use App\Models\Bangunan;
 use App\Models\Karyawan;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\Ruang;
+use App\Models\Siswa;
 use App\Models\TahunAjaran;
 use App\Models\Unit;
 use App\Models\Vendor;
@@ -239,6 +241,35 @@ class IncrementTwoSeeder extends Seeder
 
         foreach ($vendors as $v) {
             Vendor::firstOrCreate(['kode_vendor' => $v['kode_vendor']], $v);
+        }
+
+        // 7. Plotting Siswa ke Rombel Kelas Aktif
+        foreach ($units as $unit) {
+            $unitClasses = Kelas::where('unit_id', $unit->id)
+                ->where('tahun_ajaran_id', $activeTA->id)
+                ->get();
+
+            if ($unitClasses->isEmpty()) continue;
+
+            $unitStudents = Siswa::where('unit_id', $unit->id)->get();
+
+            foreach ($unitStudents as $idx => $student) {
+                // Distribute students across classes
+                $targetClass = $unitClasses[$idx % $unitClasses->count()];
+
+                AnggotaKelas::firstOrCreate(
+                    [
+                        'siswa_id' => $student->id,
+                        'kelas_id' => $targetClass->id,
+                        'tahun_ajaran_id' => $activeTA->id,
+                    ],
+                    [
+                        'tanggal_masuk' => $activeTA->tanggal_mulai,
+                        'status' => 'aktif',
+                        'keterangan' => 'Penempatan awal tahun ajaran ' . $activeTA->nama,
+                    ]
+                );
+            }
         }
     }
 }

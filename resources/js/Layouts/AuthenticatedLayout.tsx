@@ -29,6 +29,8 @@ import {
     DoorOpen,
     BookOpen,
     Truck,
+    Code2,
+    ExternalLink,
 } from 'lucide-react';
 
 let lastHandledSuccess: string | null = null;
@@ -192,7 +194,20 @@ export default function AuthenticatedLayout({
                     </div>
                 </nav>
 
-                <div className="border-t border-neutral-200 p-4 dark:border-neutral-800">
+                <div className="border-t border-neutral-200 p-4 dark:border-neutral-800 space-y-2">
+                    <a
+                        href="/docs/api"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between rounded-md border border-neutral-200 bg-background px-3 py-2 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors dark:border-neutral-800"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Code2 className="h-3.5 w-3.5 text-primary" />
+                            <span>REST API Docs</span>
+                        </div>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                    </a>
+
                     <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
                         <p className="font-semibold text-foreground">
                             Master Data Service

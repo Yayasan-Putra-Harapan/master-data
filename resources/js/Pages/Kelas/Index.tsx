@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Kelas, PaginatedData } from '@/types';
 import Pagination from '@/Components/Pagination';
 import { Button } from '@/Components/ui/button';
@@ -41,7 +41,18 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/Components/ui/select';
-import { Plus, Search, Edit2, Trash2, Layers } from 'lucide-react';
+import {
+    Plus,
+    Search,
+    Edit2,
+    Trash2,
+    Layers,
+    Users,
+    Download,
+    Upload,
+    FileSpreadsheet,
+    Printer,
+} from 'lucide-react';
 
 interface Props {
     kelas: PaginatedData<Kelas>;
@@ -53,6 +64,7 @@ interface Props {
         unit_id?: string;
         tahun_ajaran_id?: string;
         tingkat?: string;
+        per_page?: string;
     };
 }
 
@@ -60,7 +72,10 @@ export default function KelasIndex({ kelas, units, tahunAjaranList, guruList, fi
     const [search, setSearch] = useState(filters.search || '');
     const [unitFilter, setUnitFilter] = useState(filters.unit_id || 'all');
     const [taFilter, setTaFilter] = useState(filters.tahun_ajaran_id || 'all');
+    const [perPage, setPerPage] = useState(filters.per_page || '10');
+
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isImportOpen, setIsImportOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Kelas | null>(null);
     const [deletingItem, setDeletingItem] = useState<Kelas | null>(null);
 
@@ -73,15 +88,7 @@ export default function KelasIndex({ kelas, units, tahunAjaranList, guruList, fi
         }
 
         const timer = setTimeout(() => {
-            router.get(
-                route('kelas.index'),
-                {
-                    search: search || undefined,
-                    unit_id: unitFilter !== 'all' ? unitFilter : undefined,
-                    tahun_ajaran_id: taFilter !== 'all' ? taFilter : undefined,
-                },
-                { preserveState: true, preserveScroll: true, replace: true }
-            );
+            applyFilter({ search: search || undefined });
         }, 300);
 
         return () => clearTimeout(timer);
@@ -99,6 +106,10 @@ export default function KelasIndex({ kelas, units, tahunAjaranList, guruList, fi
         kapasitas: 30,
     });
 
+    const importForm = useForm({
+        file: null as File | null,
+    });
+
     const applyFilter = (params: Record<string, string | undefined>) => {
         router.get(
             route('kelas.index'),
@@ -106,9 +117,10 @@ export default function KelasIndex({ kelas, units, tahunAjaranList, guruList, fi
                 search: search || undefined,
                 unit_id: unitFilter !== 'all' ? unitFilter : undefined,
                 tahun_ajaran_id: taFilter !== 'all' ? taFilter : undefined,
+                per_page: perPage !== '10' ? perPage : undefined,
                 ...params,
             },
-            { preserveState: true, replace: true }
+            { preserveState: true, preserveScroll: true, replace: true }
         );
     };
 
@@ -150,6 +162,18 @@ export default function KelasIndex({ kelas, units, tahunAjaranList, guruList, fi
         }
     };
 
+    const handleImportSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!importForm.data.file) return;
+
+        importForm.post(route('kelas.import'), {
+            onSuccess: () => {
+                setIsImportOpen(false);
+                importForm.reset();
+            },
+        });
+    };
+
     const handleDelete = () => {
         if (!deletingItem) return;
         router.delete(route('kelas.destroy', deletingItem.id), {
@@ -157,7 +181,15 @@ export default function KelasIndex({ kelas, units, tahunAjaranList, guruList, fi
         });
     };
 
-    const selectedUnit = units.find((u) => u.id.toString() === data.unit_id);
+    const handleExport = () => {
+        const queryParams = new URLSearchParams();
+        if (search) queryParams.append('search', search);
+        if (unitFilter !== 'all') queryParams.append('unit_id', unitFilter);
+        if (taFilter !== 'all') queryParams.append('tahun_ajaran_id', taFilter);
+
+        window.location.href = `${route('kelas.export')}?${queryParams.toString()}`;
+    };
+
     const filteredWali = guruList.filter((g) => g.unit_id.toString() === data.unit_id);
 
     return (
@@ -184,9 +216,27 @@ export default function KelasIndex({ kelas, units, tahunAjaranList, guruList, fi
                                 Pengorganisasian kelas, wali kelas, dan tingkat per unit pendidikan
                             </p>
                         </div>
-                        <Button onClick={openCreateModal} size="sm" className="gap-2">
-                            <Plus className="h-4 w-4" /> Tambah Kelas
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExport}
+                                className="gap-2"
+                            >
+                                <Download className="h-4 w-4" /> Ekspor CSV
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsImportOpen(true)}
+                                className="gap-2"
+                            >
+                                <Upload className="h-4 w-4" /> Impor Masal
+                            </Button>
+                            <Button onClick={openCreateModal} size="sm" className="gap-2">
+                                <Plus className="h-4 w-4" /> Tambah Kelas
+                            </Button>
+                        </div>
                     </CardHeader>
 
                     <CardContent className="space-y-4">
@@ -245,6 +295,26 @@ export default function KelasIndex({ kelas, units, tahunAjaranList, guruList, fi
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            <div className="w-full sm:w-32">
+                                <Select
+                                    value={perPage}
+                                    onValueChange={(val) => {
+                                        setPerPage(val);
+                                        applyFilter({ per_page: val !== '10' ? val : undefined });
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Tampilkan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10 Baris</SelectItem>
+                                        <SelectItem value="25">25 Baris</SelectItem>
+                                        <SelectItem value="50">50 Baris</SelectItem>
+                                        <SelectItem value="100">100 Baris</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
                         {/* Table */}
@@ -297,6 +367,30 @@ export default function KelasIndex({ kelas, units, tahunAjaranList, guruList, fi
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-1">
+                                                        <Link href={route('kelas.anggota.index', item.id)}>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                                                title="Kelola Siswa / Anggota Rombel"
+                                                            >
+                                                                <Users className="h-4 w-4" />
+                                                            </Button>
+                                                        </Link>
+                                                        <a
+                                                            href={route('kelas.cetak', item.id)}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                        >
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                                                title="Cetak Presensi / Rombel"
+                                                            >
+                                                                <Printer className="h-4 w-4" />
+                                                            </Button>
+                                                        </a>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -332,6 +426,63 @@ export default function KelasIndex({ kelas, units, tahunAjaranList, guruList, fi
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Import Dialog */}
+            <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Impor Data Kelas (Masal)</DialogTitle>
+                        <DialogDescription>
+                            Unggah berkas CSV data rombongan belajar sesuai template.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleImportSubmit} className="space-y-4">
+                        <div className="rounded-lg border border-dashed p-4 text-center space-y-2">
+                            <FileSpreadsheet className="h-8 w-8 mx-auto text-muted-foreground" />
+                            <div className="text-xs text-muted-foreground">
+                                Format berkas harus berupa <span className="font-semibold text-foreground">.CSV</span>
+                            </div>
+                            <input
+                                type="file"
+                                accept=".csv,text/csv"
+                                onChange={(e) => importForm.setData('file', e.target.files?.[0] || null)}
+                                className="block w-full text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                            />
+                            {importForm.errors.file && (
+                                <p className="text-xs text-destructive">{importForm.errors.file}</p>
+                            )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs pt-1">
+                            <span className="text-muted-foreground">Belum punya format?</span>
+                            <a
+                                href={route('kelas.template')}
+                                download
+                                className="font-medium text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                                <Download className="h-3.5 w-3.5" /> Unduh Template CSV
+                            </a>
+                        </div>
+
+                        <DialogFooter className="pt-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsImportOpen(false)}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={!importForm.data.file || importForm.processing}
+                            >
+                                {importForm.processing ? 'Mengimpor...' : 'Mulai Impor'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* Dialog Form */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>

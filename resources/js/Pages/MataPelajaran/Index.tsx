@@ -41,7 +41,16 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/Components/ui/select';
-import { Plus, Search, Edit2, Trash2, BookOpen } from 'lucide-react';
+import {
+    Plus,
+    Search,
+    Edit2,
+    Trash2,
+    BookOpen,
+    Download,
+    Upload,
+    FileSpreadsheet,
+} from 'lucide-react';
 
 interface Props {
     mataPelajaran: PaginatedData<MataPelajaran>;
@@ -50,6 +59,7 @@ interface Props {
         search?: string;
         unit_id?: string;
         kelompok?: string;
+        per_page?: string;
     };
 }
 
@@ -57,7 +67,10 @@ export default function MataPelajaranIndex({ mataPelajaran, units, filters }: Pr
     const [search, setSearch] = useState(filters.search || '');
     const [unitFilter, setUnitFilter] = useState(filters.unit_id || 'all');
     const [kelompokFilter, setKelompokFilter] = useState(filters.kelompok || 'all');
+    const [perPage, setPerPage] = useState(filters.per_page || '10');
+
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isImportOpen, setIsImportOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<MataPelajaran | null>(null);
     const [deletingItem, setDeletingItem] = useState<MataPelajaran | null>(null);
 
@@ -70,15 +83,7 @@ export default function MataPelajaranIndex({ mataPelajaran, units, filters }: Pr
         }
 
         const timer = setTimeout(() => {
-            router.get(
-                route('mata-pelajaran.index'),
-                {
-                    search: search || undefined,
-                    unit_id: unitFilter !== 'all' ? unitFilter : undefined,
-                    kelompok: kelompokFilter !== 'all' ? kelompokFilter : undefined,
-                },
-                { preserveState: true, preserveScroll: true, replace: true }
-            );
+            applyFilter({ search: search || undefined });
         }, 300);
 
         return () => clearTimeout(timer);
@@ -93,6 +98,10 @@ export default function MataPelajaranIndex({ mataPelajaran, units, filters }: Pr
         keterangan: '',
     });
 
+    const importForm = useForm({
+        file: null as File | null,
+    });
+
     const applyFilter = (params: Record<string, string | undefined>) => {
         router.get(
             route('mata-pelajaran.index'),
@@ -100,9 +109,10 @@ export default function MataPelajaranIndex({ mataPelajaran, units, filters }: Pr
                 search: search || undefined,
                 unit_id: unitFilter !== 'all' ? unitFilter : undefined,
                 kelompok: kelompokFilter !== 'all' ? kelompokFilter : undefined,
+                per_page: perPage !== '10' ? perPage : undefined,
                 ...params,
             },
-            { preserveState: true, replace: true }
+            { preserveState: true, preserveScroll: true, replace: true }
         );
     };
 
@@ -143,11 +153,32 @@ export default function MataPelajaranIndex({ mataPelajaran, units, filters }: Pr
         }
     };
 
+    const handleImportSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!importForm.data.file) return;
+
+        importForm.post(route('mata-pelajaran.import'), {
+            onSuccess: () => {
+                setIsImportOpen(false);
+                importForm.reset();
+            },
+        });
+    };
+
     const handleDelete = () => {
         if (!deletingItem) return;
         router.delete(route('mata-pelajaran.destroy', deletingItem.id), {
             onSuccess: () => setDeletingItem(null),
         });
+    };
+
+    const handleExport = () => {
+        const queryParams = new URLSearchParams();
+        if (search) queryParams.append('search', search);
+        if (unitFilter !== 'all') queryParams.append('unit_id', unitFilter);
+        if (kelompokFilter !== 'all') queryParams.append('kelompok', kelompokFilter);
+
+        window.location.href = `${route('mata-pelajaran.export')}?${queryParams.toString()}`;
     };
 
     const getKelompokBadge = (kelompok: MataPelajaran['kelompok']) => {
@@ -187,9 +218,27 @@ export default function MataPelajaranIndex({ mataPelajaran, units, filters }: Pr
                                 Standar kurikulum mata pelajaran per jenjang satuan pendidikan yayasan
                             </p>
                         </div>
-                        <Button onClick={openCreateModal} size="sm" className="gap-2">
-                            <Plus className="h-4 w-4" /> Tambah Mata Pelajaran
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExport}
+                                className="gap-2"
+                            >
+                                <Download className="h-4 w-4" /> Ekspor CSV
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsImportOpen(true)}
+                                className="gap-2"
+                            >
+                                <Upload className="h-4 w-4" /> Impor Masal
+                            </Button>
+                            <Button onClick={openCreateModal} size="sm" className="gap-2">
+                                <Plus className="h-4 w-4" /> Tambah Mata Pelajaran
+                            </Button>
+                        </div>
                     </CardHeader>
 
                     <CardContent className="space-y-4">
@@ -244,6 +293,26 @@ export default function MataPelajaranIndex({ mataPelajaran, units, filters }: Pr
                                         <SelectItem value="peminatan">Peminatan</SelectItem>
                                         <SelectItem value="muatan_lokal">Muatan Lokal</SelectItem>
                                         <SelectItem value="ekstrakurikuler">Ekstrakurikuler</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="w-full sm:w-32">
+                                <Select
+                                    value={perPage}
+                                    onValueChange={(val) => {
+                                        setPerPage(val);
+                                        applyFilter({ per_page: val !== '10' ? val : undefined });
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Tampilkan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="10">10 Baris</SelectItem>
+                                        <SelectItem value="25">25 Baris</SelectItem>
+                                        <SelectItem value="50">50 Baris</SelectItem>
+                                        <SelectItem value="100">100 Baris</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -328,6 +397,63 @@ export default function MataPelajaranIndex({ mataPelajaran, units, filters }: Pr
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Import Dialog */}
+            <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Impor Mata Pelajaran (Masal)</DialogTitle>
+                        <DialogDescription>
+                            Unggah berkas CSV mata pelajaran sesuai template.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleImportSubmit} className="space-y-4">
+                        <div className="rounded-lg border border-dashed p-4 text-center space-y-2">
+                            <FileSpreadsheet className="h-8 w-8 mx-auto text-muted-foreground" />
+                            <div className="text-xs text-muted-foreground">
+                                Format berkas harus berupa <span className="font-semibold text-foreground">.CSV</span>
+                            </div>
+                            <input
+                                type="file"
+                                accept=".csv,text/csv"
+                                onChange={(e) => importForm.setData('file', e.target.files?.[0] || null)}
+                                className="block w-full text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer"
+                            />
+                            {importForm.errors.file && (
+                                <p className="text-xs text-destructive">{importForm.errors.file}</p>
+                            )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs pt-1">
+                            <span className="text-muted-foreground">Belum punya format?</span>
+                            <a
+                                href={route('mata-pelajaran.template')}
+                                download
+                                className="font-medium text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                                <Download className="h-3.5 w-3.5" /> Unduh Template CSV
+                            </a>
+                        </div>
+
+                        <DialogFooter className="pt-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsImportOpen(false)}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={!importForm.data.file || importForm.processing}
+                            >
+                                {importForm.processing ? 'Mengimpor...' : 'Mulai Impor'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
 
             {/* Dialog Form */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>

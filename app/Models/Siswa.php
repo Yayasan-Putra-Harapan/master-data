@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Siswa extends Model
@@ -44,5 +46,17 @@ class Siswa extends Model
     public function orangTua(): BelongsTo
     {
         return $this->belongsTo(OrangTua::class, 'orang_tua_id');
+    }
+
+    public function anggotaKelas(): HasMany
+    {
+        return $this->hasMany(AnggotaKelas::class, 'siswa_id');
+    }
+
+    public function riwayatKelas(): BelongsToMany
+    {
+        return $this->belongsToMany(Kelas::class, 'anggota_kelas', 'siswa_id', 'kelas_id')
+            ->withPivot(['tahun_ajaran_id', 'status', 'tanggal_masuk', 'keterangan'])
+            ->withTimestamps();
     }
 }
