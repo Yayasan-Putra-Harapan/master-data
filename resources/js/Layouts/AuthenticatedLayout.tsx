@@ -23,6 +23,12 @@ import {
     User as UserIcon,
     ChevronDown,
     LogOut,
+    CalendarDays,
+    Layers,
+    Building,
+    DoorOpen,
+    BookOpen,
+    Truck,
 } from 'lucide-react';
 
 let lastHandledSuccess: string | null = null;
@@ -50,7 +56,7 @@ export default function AuthenticatedLayout({
         }
     }, [flash]);
 
-    const navigation = [
+    const coreNavigation = [
         {
             name: 'Dashboard',
             href: route('dashboard'),
@@ -83,51 +89,115 @@ export default function AuthenticatedLayout({
         },
     ];
 
+    const extensionNavigation = [
+        {
+            name: 'Tahun Ajaran',
+            href: route('tahun-ajaran.index'),
+            icon: CalendarDays,
+            current: route().current('tahun-ajaran.*'),
+        },
+        {
+            name: 'Rombel / Kelas',
+            href: route('kelas.index'),
+            icon: Layers,
+            current: route().current('kelas.*'),
+        },
+        {
+            name: 'Bangunan Gedung',
+            href: route('bangunan.index'),
+            icon: Building,
+            current: route().current('bangunan.*'),
+        },
+        {
+            name: 'Ruangan Fasilitas',
+            href: route('ruang.index'),
+            icon: DoorOpen,
+            current: route().current('ruang.*'),
+        },
+        {
+            name: 'Mata Pelajaran',
+            href: route('mata-pelajaran.index'),
+            icon: BookOpen,
+            current: route().current('mata-pelajaran.*'),
+        },
+        {
+            name: 'Rekanan & Vendor',
+            href: route('vendor.index'),
+            icon: Truck,
+            current: route().current('vendor.*'),
+        },
+    ];
+
     return (
         <div className="flex min-h-screen bg-neutral-50/50 dark:bg-neutral-950">
             {/* Sidebar */}
             <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900 md:flex">
-                <div className="flex h-16 items-center gap-3 border-b border-neutral-200 px-6 dark:border-neutral-800">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900">
+                <div className="flex h-16 shrink-0 items-center gap-3 border-b border-neutral-200 px-6 dark:border-neutral-800">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs">
                         <Building2 className="h-5 w-5" />
                     </div>
                     <div>
-                        <h1 className="text-sm font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+                        <h1 className="text-sm font-semibold tracking-tight text-foreground">
                             Yayasan MDM
                         </h1>
-                        <p className="text-xs text-neutral-500">Putra Harapan</p>
+                        <p className="text-xs text-muted-foreground">Putra Harapan</p>
                     </div>
                 </div>
 
-                <nav className="flex-1 space-y-1 p-4">
-                    <div className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-                        Master Data
+                <nav className="flex-1 space-y-4 overflow-y-auto p-4">
+                    <div className="space-y-1">
+                        <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Entitas Inti (Core)
+                        </div>
+                        {coreNavigation.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                                <Link
+                                    key={item.name}
+                                    href={item.href}
+                                    className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                                        item.current
+                                            ? 'bg-primary text-primary-foreground shadow-xs'
+                                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                    }`}
+                                >
+                                    <Icon className="h-4 w-4 shrink-0" />
+                                    <span>{item.name}</span>
+                                </Link>
+                            );
+                        })}
                     </div>
-                    {navigation.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                            <Link
-                                key={item.name}
-                                href={item.href}
-                                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                                    item.current
-                                        ? 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'
-                                        : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100'
-                                }`}
-                            >
-                                <Icon className="h-4 w-4 shrink-0" />
-                                {item.name}
-                            </Link>
-                        );
-                    })}
+
+                    <div className="space-y-1 pt-1">
+                        <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Akademik & Logistik
+                        </div>
+                        {extensionNavigation.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                                <Link
+                                    key={item.name}
+                                    href={item.href}
+                                    className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                                        item.current
+                                            ? 'bg-primary text-primary-foreground shadow-xs'
+                                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                                    }`}
+                                >
+                                    <Icon className="h-4 w-4 shrink-0" />
+                                    <span>{item.name}</span>
+                                </Link>
+                            );
+                        })}
+                    </div>
                 </nav>
 
                 <div className="border-t border-neutral-200 p-4 dark:border-neutral-800">
-                    <div className="rounded-lg bg-neutral-50 p-3 text-xs text-neutral-500 dark:bg-neutral-800/50">
-                        <p className="font-semibold text-neutral-700 dark:text-neutral-300">
+                    <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+                        <p className="font-semibold text-foreground">
                             Master Data Service
                         </p>
-                        <p>Yayasan Pendidikan Putra Harapan</p>
+                        <p>10 Entitas Terintegrasi</p>
                     </div>
                 </div>
             </aside>

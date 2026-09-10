@@ -122,3 +122,61 @@ test('siswa validation enforces accuracy: rejects illogical age for PG', functio
         $response->assertSessionHasErrors('tanggal_lahir');
     }
 });
+
+// Increment 2 Tests
+test('authenticated user can view tahun ajaran web page via inertia', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/tahun-ajaran');
+
+    $response->assertStatus(200);
+});
+
+test('authenticated user can view kelas web page via inertia', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/kelas');
+
+    $response->assertStatus(200);
+});
+
+test('authenticated user can view bangunan web page via inertia', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/bangunan');
+
+    $response->assertStatus(200);
+});
+
+test('authenticated user can view ruang web page via inertia', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/ruang');
+
+    $response->assertStatus(200);
+});
+
+test('authenticated user can view mata pelajaran web page via inertia', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/mata-pelajaran');
+
+    $response->assertStatus(200);
+});
+
+test('authenticated user can view vendor web page via inertia', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/vendor');
+
+    $response->assertStatus(200);
+});
+
+test('api can fetch all increment 2 endpoints listing', function () {
+    $this->getJson('/api/v1/tahun-ajaran')->assertStatus(200)->assertJsonStructure(['data']);
+    $this->getJson('/api/v1/kelas')->assertStatus(200)->assertJsonStructure(['data']);
+    $this->getJson('/api/v1/bangunan')->assertStatus(200)->assertJsonStructure(['data']);
+    $this->getJson('/api/v1/ruang')->assertStatus(200)->assertJsonStructure(['data']);
+    $this->getJson('/api/v1/mata-pelajaran')->assertStatus(200)->assertJsonStructure(['data']);
+    $this->getJson('/api/v1/vendor')->assertStatus(200)->assertJsonStructure(['data']);
+});

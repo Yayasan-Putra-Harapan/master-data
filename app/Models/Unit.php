@@ -38,4 +38,19 @@ class Unit extends Model
     {
         return $this->hasMany(Siswa::class, 'unit_id');
     }
+
+    public function kelas(): HasMany
+    {
+        return $this->hasMany(Kelas::class, 'unit_id');
+    }
+
+    public function bangunan(): HasMany
+    {
+        return $this->hasMany(Bangunan::class, 'unit_id');
+    }
+
+    public function mataPelajaran(): HasMany
+    {
+        return $this->hasMany(MataPelajaran::class, 'unit_id');
+    }
 }

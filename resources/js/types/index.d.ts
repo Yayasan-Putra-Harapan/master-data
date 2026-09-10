@@ -80,6 +80,80 @@ export interface Siswa {
     status: 'aktif' | 'lulus' | 'mutasi' | 'keluar';
 }
 
+export interface TahunAjaran {
+    id: number;
+    kode: string;
+    nama: string;
+    semester: 'ganjil' | 'genap';
+    tanggal_mulai: string;
+    tanggal_selesai: string;
+    is_aktif: boolean;
+    kelas_count?: number;
+}
+
+export interface Kelas {
+    id: number;
+    kode_kelas: string;
+    nama_kelas: string;
+    tingkat: number;
+    unit_id: number;
+    unit?: Unit;
+    tahun_ajaran_id: number;
+    tahun_ajaran?: TahunAjaran;
+    wali_kelas_id?: number;
+    wali_kelas?: Karyawan;
+    kapasitas: number;
+}
+
+export interface Bangunan {
+    id: number;
+    kode_bangunan: string;
+    nama_bangunan: string;
+    unit_id: number;
+    unit?: Unit;
+    jumlah_lantai: number;
+    luas?: number;
+    kondisi: 'baik' | 'rusak_ringan' | 'rusak_berat';
+    keterangan?: string;
+    ruang_count?: number;
+}
+
+export interface Ruang {
+    id: number;
+    kode_ruang: string;
+    nama_ruang: string;
+    bangunan_id: number;
+    bangunan?: Bangunan;
+    lantai: number;
+    fungsi: 'kelas' | 'laboratorium' | 'perpustakaan' | 'kantor' | 'aula' | 'ibadah' | 'lainnya';
+    kapasitas: number;
+    kondisi: 'baik' | 'rusak_ringan' | 'rusak_berat';
+    keterangan?: string;
+}
+
+export interface MataPelajaran {
+    id: number;
+    kode_mapel: string;
+    nama_mapel: string;
+    unit_id: number;
+    unit?: Unit;
+    kelompok: 'wajib' | 'peminatan' | 'muatan_lokal' | 'ekstrakurikuler';
+    beban_jam: number;
+    keterangan?: string;
+}
+
+export interface Vendor {
+    id: number;
+    kode_vendor: string;
+    nama_vendor: string;
+    kategori: 'sarana_prasarana' | 'buku_pelajaran' | 'katering' | 'seragam' | 'teknologi' | 'kebersihan' | 'lainnya';
+    nama_kontak?: string;
+    telepon: string;
+    email?: string;
+    alamat?: string;
+    status: 'aktif' | 'non_aktif';
+}
+
 export interface PaginatedData<T> {
     data: T[];
     current_page: number;
