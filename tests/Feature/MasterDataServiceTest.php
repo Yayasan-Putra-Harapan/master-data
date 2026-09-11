@@ -54,8 +54,18 @@ test('authenticated user can view data quality audit page via inertia', function
     $response->assertStatus(200);
 });
 
-test('api can fetch units listing', function () {
+test('unauthenticated api request is rejected with 401', function () {
     $response = $this->getJson('/api/v1/units');
+
+    $response->assertStatus(401);
+});
+
+test('authenticated api request with sanctum token can fetch units listing', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('test-token')->plainTextToken;
+
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/v1/units');
 
     $response->assertStatus(200)
         ->assertJsonStructure([
@@ -65,8 +75,12 @@ test('api can fetch units listing', function () {
         ]);
 });
 
-test('api can fetch data quality audit metrics', function () {
-    $response = $this->getJson('/api/v1/data-quality');
+test('api can fetch data quality audit metrics with token', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('test-token')->plainTextToken;
+
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/v1/data-quality');
 
     $response->assertStatus(200)
         ->assertJsonStructure([
@@ -172,13 +186,17 @@ test('authenticated user can view vendor web page via inertia', function () {
     $response->assertStatus(200);
 });
 
-test('api can fetch all increment 2 endpoints listing', function () {
-    $this->getJson('/api/v1/tahun-ajaran')->assertStatus(200)->assertJsonStructure(['data']);
-    $this->getJson('/api/v1/kelas')->assertStatus(200)->assertJsonStructure(['data']);
-    $this->getJson('/api/v1/bangunan')->assertStatus(200)->assertJsonStructure(['data']);
-    $this->getJson('/api/v1/ruang')->assertStatus(200)->assertJsonStructure(['data']);
-    $this->getJson('/api/v1/mata-pelajaran')->assertStatus(200)->assertJsonStructure(['data']);
-    $this->getJson('/api/v1/vendor')->assertStatus(200)->assertJsonStructure(['data']);
+test('api can fetch all increment 2 endpoints listing with token', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('test-token')->plainTextToken;
+
+    $client = $this->withHeader('Authorization', "Bearer {$token}");
+    $client->getJson('/api/v1/tahun-ajaran')->assertStatus(200)->assertJsonStructure(['data']);
+    $client->getJson('/api/v1/kelas')->assertStatus(200)->assertJsonStructure(['data']);
+    $client->getJson('/api/v1/bangunan')->assertStatus(200)->assertJsonStructure(['data']);
+    $client->getJson('/api/v1/ruang')->assertStatus(200)->assertJsonStructure(['data']);
+    $client->getJson('/api/v1/mata-pelajaran')->assertStatus(200)->assertJsonStructure(['data']);
+    $client->getJson('/api/v1/vendor')->assertStatus(200)->assertJsonStructure(['data']);
 });
 
 // Master Data Bulk Import & Export Tests
@@ -351,35 +369,49 @@ test('authenticated user can plot students into a class', function () {
     ]);
 });
 
-test('api can fetch students enrolled in a class', function () {
+test('api can fetch students enrolled in a class with token', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('test-token')->plainTextToken;
     $kelas = \App\Models\Kelas::first() ?? \App\Models\Kelas::factory()->create();
 
-    $response = $this->getJson("/api/v1/kelas/{$kelas->id}/siswa");
+    $response = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson("/api/v1/kelas/{$kelas->id}/siswa");
 
     $response->assertStatus(200)
         ->assertJsonStructure(['data']);
 });
 
-test('api can enroll student to a class and remove them', function () {
+test('api can enroll student to a class and remove them with token', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('test-token')->plainTextToken;
     $kelas = \App\Models\Kelas::first() ?? \App\Models\Kelas::factory()->create();
     $siswa = \App\Models\Siswa::factory()->create(['unit_id' => $kelas->unit_id]);
 
+    $client = $this->withHeader('Authorization', "Bearer {$token}");
+
     // Enroll
-    $enrollResponse = $this->postJson("/api/v1/kelas/{$kelas->id}/siswa", [
+    $enrollResponse = $client->postJson("/api/v1/kelas/{$kelas->id}/siswa", [
         'siswa_ids' => [$siswa->id],
     ]);
     $enrollResponse->assertStatus(201);
 
     // Remove
-    $removeResponse = $this->deleteJson("/api/v1/kelas/{$kelas->id}/siswa/{$siswa->id}");
+    $removeResponse = $client->deleteJson("/api/v1/kelas/{$kelas->id}/siswa/{$siswa->id}");
     $removeResponse->assertStatus(200);
 });
 
-// REST API Documentation (OpenAPI / Swagger via Scramble) Tests
-test('openapi json specification endpoint is accessible and valid', function () {
-    $response = $this->get('/docs/api.json');
+// REST API Documentation Access Control Tests
+test('unauthenticated guest cannot view api documentation (403 forbidden)', function () {
+    $this->get('/docs/api')->assertStatus(403);
+    $this->get('/docs/api.json')->assertStatus(403);
+});
 
-    $response->assertStatus(200)
+test('authenticated user can view api documentation and openapi schema', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->get('/docs/api')->assertStatus(200);
+    $this->actingAs($user)->get('/docs/api.json')
+        ->assertStatus(200)
         ->assertJsonStructure([
             'openapi',
             'info' => ['title', 'version'],
@@ -387,10 +419,47 @@ test('openapi json specification endpoint is accessible and valid', function () 
         ]);
 });
 
-test('interactive api documentation ui endpoint is accessible', function () {
-    $response = $this->get('/docs/api');
+// Web API Token Management Tests
+test('authenticated user can view api tokens page via inertia', function () {
+    $user = User::factory()->create();
 
-    $response->assertStatus(200);
+    $this->actingAs($user)->get('/api-tokens')->assertStatus(200);
+});
+
+test('authenticated user can generate new personal access token with sk-yayasan-ph- prefix', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post('/api-tokens', [
+        'name' => 'Token Tim Frontend',
+    ]);
+
+    $response->assertRedirect('/api-tokens');
+    $response->assertSessionHas('plainTextToken');
+
+    $generatedToken = session('plainTextToken');
+    expect($generatedToken)->toStartWith('sk-yayasan-ph-');
+
+    $this->assertDatabaseHas('personal_access_tokens', [
+        'name' => 'Token Tim Frontend',
+        'tokenable_id' => $user->id,
+    ]);
+
+    // Test that this generated token authenticates successfully against API
+    $apiResponse = $this->withHeader('Authorization', "Bearer {$generatedToken}")
+        ->getJson('/api/v1/units');
+    $apiResponse->assertStatus(200);
+});
+
+test('authenticated user can revoke personal access token', function () {
+    $user = User::factory()->create();
+    $token = $user->createToken('Token Segera Dicabut');
+
+    $response = $this->actingAs($user)->delete("/api-tokens/{$token->accessToken->id}");
+
+    $response->assertRedirect('/api-tokens');
+    $this->assertDatabaseMissing('personal_access_tokens', [
+        'id' => $token->accessToken->id,
+    ]);
 });
 
 // Print / PDF Official Documents Tests

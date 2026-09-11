@@ -167,6 +167,13 @@ export interface AnggotaKelas {
     keterangan?: string;
 }
 
+export interface ApiToken {
+    id: number;
+    name: string;
+    last_used_at: string | null;
+    created_at: string | null;
+}
+
 export interface PaginatedData<T> {
     data: T[];
     current_page: number;
@@ -191,5 +198,6 @@ export type PageProps<
     flash?: {
         success?: string | null;
         error?: string | null;
+        plainTextToken?: string | null;
     };
 };

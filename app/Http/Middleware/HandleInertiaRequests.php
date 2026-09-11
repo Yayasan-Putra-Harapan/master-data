@@ -37,6 +37,7 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->pull('success'),
                 'error' => fn () => $request->session()->pull('error'),
+                'plainTextToken' => fn () => $request->session()->pull('plainTextToken'),
             ],
         ];
     }

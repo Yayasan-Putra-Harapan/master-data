@@ -14,7 +14,7 @@ use App\Http\Controllers\Api\V1\UnitApiController;
 use App\Http\Controllers\Api\V1\VendorApiController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->name('api.v1.')->group(function () {
+Route::prefix('v1')->name('api.v1.')->middleware('auth:sanctum')->group(function () {
     // Increment 1
     Route::apiResource('units', UnitApiController::class);
     Route::apiResource('orang-tua', OrangTuaApiController::class);

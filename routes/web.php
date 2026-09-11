@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Web\AnggotaKelasController;
+use App\Http\Controllers\Web\ApiTokenController;
 use App\Http\Controllers\Web\BangunanController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\DataQualityAuditController;
@@ -87,6 +88,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Data Quality Audit (hidden from menu, route retained for research)
     Route::get('/data-quality', [DataQualityAuditController::class, 'index'])->name('data-quality.index');
+
+    // API Tokens Management
+    Route::get('/api-tokens', [ApiTokenController::class, 'index'])->name('api-tokens.index');
+    Route::post('/api-tokens', [ApiTokenController::class, 'store'])->name('api-tokens.store');
+    Route::delete('/api-tokens/{id}', [ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

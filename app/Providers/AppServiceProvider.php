@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Vite;
@@ -28,8 +29,8 @@ class AppServiceProvider extends ServiceProvider
             'kelas' => 'kelas',
         ]);
 
-        Gate::define('viewApiDocs', function ($user = null) {
-            return true;
+        Gate::define('viewApiDocs', function (?User $user) {
+            return $user !== null;
         });
     }
 }
