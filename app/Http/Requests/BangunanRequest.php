@@ -9,6 +9,27 @@ class BangunanRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        $user = $this->user();
+        if (!$user) {
+            return true;
+        }
+
+        if ($user->isSuperadmin()) {
+            return true;
+        }
+
+        $bangunan = $this->route('bangunan');
+        if ($bangunan) {
+            $bangunanModel = $bangunan instanceof \App\Models\Bangunan ? $bangunan : \App\Models\Bangunan::find($bangunan);
+            if ($bangunanModel && !$user->canAccessUnit($bangunanModel->unit_id)) {
+                return false;
+            }
+        }
+
+        if ($this->has('unit_id') && !$user->canAccessUnit((int)$this->input('unit_id'))) {
+            return false;
+        }
+
         return true;
     }
 

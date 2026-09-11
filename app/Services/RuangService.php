@@ -23,6 +23,10 @@ class RuangService
             $query->where('bangunan_id', $filters['bangunan_id']);
         }
 
+        if (!empty($filters['unit_id'])) {
+            $query->whereHas('bangunan', fn($q) => $q->where('unit_id', $filters['unit_id']));
+        }
+
         if (!empty($filters['fungsi'])) {
             $query->where('fungsi', $filters['fungsi']);
         }

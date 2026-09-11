@@ -21,6 +21,8 @@ class AnggotaKelasController extends Controller
 
     public function index(Request $request, Kelas $kelas): Response
     {
+        abort_if(!$request->user()->canAccessUnit($kelas->unit_id), 403, 'Akses ditolak. Anda tidak memiliki wewenang pada kelas unit ini.');
+
         $kelas->load(['unit', 'tahunAjaran', 'waliKelas']);
 
         $filters = $request->only(['search', 'status', 'per_page']);
@@ -50,6 +52,8 @@ class AnggotaKelasController extends Controller
 
     public function availableSiswa(Request $request, Kelas $kelas): JsonResponse
     {
+        abort_if(!$request->user()->canAccessUnit($kelas->unit_id), 403, 'Akses ditolak.');
+
         $siswa = $this->service->getAvailableSiswaForKelas($kelas, $request->only('search'));
 
         return response()->json([
@@ -59,6 +63,8 @@ class AnggotaKelasController extends Controller
 
     public function store(PlotSiswaRequest $request, Kelas $kelas): RedirectResponse
     {
+        abort_if(!$request->user()->canAccessUnit($kelas->unit_id), 403, 'Akses ditolak.');
+
         try {
             $res = $this->service->plotSiswaToKelas(
                 $kelas,
@@ -77,6 +83,8 @@ class AnggotaKelasController extends Controller
 
     public function destroy(Request $request, Kelas $kelas, Siswa $siswa): RedirectResponse
     {
+        abort_if(!$request->user()->canAccessUnit($kelas->unit_id), 403, 'Akses ditolak.');
+
         $success = $this->service->removeSiswaFromKelas($kelas, $siswa->id, $request->input('keterangan'));
 
         if ($success) {
@@ -90,7 +98,10 @@ class AnggotaKelasController extends Controller
 
     public function transfer(TransferSiswaRequest $request, Kelas $kelas): RedirectResponse
     {
+        abort_if(!$request->user()->canAccessUnit($kelas->unit_id), 403, 'Akses ditolak.');
+
         $targetKelas = Kelas::findOrFail($request->input('target_kelas_id'));
+        abort_if(!$request->user()->canAccessUnit($targetKelas->unit_id), 403, 'Akses ditolak ke kelas tujuan.');
 
         try {
             $res = $this->service->transferSiswa(

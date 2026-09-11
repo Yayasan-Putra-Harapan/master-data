@@ -25,34 +25,60 @@ class MataPelajaranController extends Controller
 
     public function index(Request $request): Response
     {
+        $user = $request->user();
         $filters = $request->only(['search', 'unit_id', 'kelompok', 'per_page']);
+
+        if ($user && $user->isOperator()) {
+            $filters['unit_id'] = (string) $user->unit_id;
+        }
+
         $perPage = (int)$request->input('per_page', 10);
         $mataPelajaran = $this->service->getPaginated($filters, $perPage);
-        $units = Unit::select('id', 'kode_unit', 'nama_unit')->where('is_aktif', true)->get();
+
+        $unitsQuery = Unit::select('id', 'kode_unit', 'nama_unit')->where('is_aktif', true);
+        if ($user && $user->isOperator()) {
+            $unitsQuery->where('id', $user->unit_id);
+        }
+        $units = $unitsQuery->get();
 
         return Inertia::render('MataPelajaran/Index', [
             'mataPelajaran' => $mataPelajaran,
             'units' => $units,
             'filters' => $filters,
+            'isOperator' => $user?->isOperator() ?? false,
         ]);
     }
 
     public function store(MataPelajaranRequest $request): RedirectResponse
     {
-        $this->service->create($request->validated());
+        $validated = $request->validated();
+        if ($request->user() && $request->user()->isOperator()) {
+            $validated['unit_id'] = $request->user()->unit_id;
+        }
+
+        $this->service->create($validated);
 
         return redirect()->route('mata-pelajaran.index')->with('success', 'Mata pelajaran berhasil ditambahkan.');
     }
 
     public function update(MataPelajaranRequest $request, MataPelajaran $mataPelajaran): RedirectResponse
     {
-        $this->service->update($mataPelajaran, $request->validated());
+        abort_if(!$request->user()->canAccessUnit($mataPelajaran->unit_id), 403, 'Akses ditolak. Anda tidak memiliki wewenang pada data unit ini.');
+
+        $validated = $request->validated();
+        if ($request->user() && $request->user()->isOperator()) {
+            $validated['unit_id'] = $request->user()->unit_id;
+        }
+
+        $this->service->update($mataPelajaran, $validated);
 
         return redirect()->route('mata-pelajaran.index')->with('success', 'Mata pelajaran berhasil diperbarui.');
     }
 
-    public function destroy(MataPelajaran $mataPelajaran): RedirectResponse
+    public function destroy(Request $request, MataPelajaran $mataPelajaran): RedirectResponse
     {
+        abort_if(!$request->user()->canAccessUnit($mataPelajaran->unit_id), 403, 'Akses ditolak. Anda tidak memiliki wewenang pada data unit ini.');
+
         $this->service->delete($mataPelajaran);
 
         return redirect()->route('mata-pelajaran.index')->with('success', 'Mata pelajaran berhasil dihapus.');
@@ -60,7 +86,12 @@ class MataPelajaranController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        return $this->exportService->exportMataPelajaran($request->all());
+        $filters = $request->all();
+        if ($request->user() && $request->user()->isOperator()) {
+            $filters['unit_id'] = $request->user()->unit_id;
+        }
+
+        return $this->exportService->exportMataPelajaran($filters);
     }
 
     public function template(): StreamedResponse

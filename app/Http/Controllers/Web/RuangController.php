@@ -25,20 +25,35 @@ class RuangController extends Controller
 
     public function index(Request $request): Response
     {
+        $user = $request->user();
         $filters = $request->only(['search', 'bangunan_id', 'fungsi', 'kondisi', 'per_page']);
+
+        if ($user && $user->isOperator()) {
+            $filters['unit_id'] = (string) $user->unit_id;
+        }
+
         $perPage = (int)$request->input('per_page', 10);
         $ruang = $this->service->getPaginated($filters, $perPage);
-        $bangunanList = Bangunan::with('unit')->select('id', 'kode_bangunan', 'nama_bangunan', 'unit_id')->get();
+
+        $bangunanQuery = Bangunan::with('unit')->select('id', 'kode_bangunan', 'nama_bangunan', 'unit_id');
+        if ($user && $user->isOperator()) {
+            $bangunanQuery->where('unit_id', $user->unit_id);
+        }
+        $bangunanList = $bangunanQuery->get();
 
         return Inertia::render('Ruang/Index', [
             'ruang' => $ruang,
             'bangunanList' => $bangunanList,
             'filters' => $filters,
+            'isOperator' => $user?->isOperator() ?? false,
         ]);
     }
 
     public function store(RuangRequest $request): RedirectResponse
     {
+        $bangunan = Bangunan::findOrFail($request->input('bangunan_id'));
+        abort_if(!$request->user()->canAccessUnit($bangunan->unit_id), 403, 'Akses ditolak. Gedung ini di luar unit wewenang Anda.');
+
         $this->service->create($request->validated());
 
         return redirect()->route('ruang.index')->with('success', 'Data ruangan berhasil ditambahkan.');
@@ -46,13 +61,20 @@ class RuangController extends Controller
 
     public function update(RuangRequest $request, Ruang $ruang): RedirectResponse
     {
+        abort_if(!$request->user()->canAccessUnit($ruang->bangunan->unit_id), 403, 'Akses ditolak.');
+
+        $targetBangunan = Bangunan::findOrFail($request->input('bangunan_id'));
+        abort_if(!$request->user()->canAccessUnit($targetBangunan->unit_id), 403, 'Akses ditolak.');
+
         $this->service->update($ruang, $request->validated());
 
         return redirect()->route('ruang.index')->with('success', 'Data ruangan berhasil diperbarui.');
     }
 
-    public function destroy(Ruang $ruang): RedirectResponse
+    public function destroy(Request $request, Ruang $ruang): RedirectResponse
     {
+        abort_if(!$request->user()->canAccessUnit($ruang->bangunan->unit_id), 403, 'Akses ditolak.');
+
         $this->service->delete($ruang);
 
         return redirect()->route('ruang.index')->with('success', 'Data ruangan berhasil dihapus.');

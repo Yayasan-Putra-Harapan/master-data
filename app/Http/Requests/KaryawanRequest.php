@@ -12,6 +12,27 @@ class KaryawanRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        $user = $this->user();
+        if (!$user) {
+            return true;
+        }
+
+        if ($user->isSuperadmin()) {
+            return true;
+        }
+
+        $karyawan = $this->route('karyawan');
+        if ($karyawan) {
+            $karyawanModel = $karyawan instanceof \App\Models\Karyawan ? $karyawan : \App\Models\Karyawan::find($karyawan);
+            if ($karyawanModel && !$user->canAccessUnit($karyawanModel->unit_id)) {
+                return false;
+            }
+        }
+
+        if ($this->has('unit_id') && !$user->canAccessUnit((int)$this->input('unit_id'))) {
+            return false;
+        }
+
         return true;
     }
 

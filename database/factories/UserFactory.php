@@ -27,10 +27,20 @@ class UserFactory extends Factory
         return [
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
+            'role' => 'superadmin',
+            'unit_id' => null,
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];
+    }
+
+    public function operator($unit = null): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'operator',
+            'unit_id' => $unit instanceof \App\Models\Unit ? $unit->id : ($unit ?? \App\Models\Unit::factory()),
+        ]);
     }
 
     /**

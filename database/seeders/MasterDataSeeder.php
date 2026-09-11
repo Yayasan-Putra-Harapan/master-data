@@ -17,11 +17,13 @@ class MasterDataSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Admin User
-        User::firstOrCreate(
+        // 1. Admin User (Superadmin)
+        User::updateOrCreate(
             ['email' => 'admin@yayasan.ac.id'],
             [
                 'name' => 'Administrator Yayasan',
+                'role' => 'superadmin',
+                'unit_id' => null,
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
             ]

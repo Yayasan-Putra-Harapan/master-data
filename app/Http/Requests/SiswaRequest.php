@@ -12,6 +12,27 @@ class SiswaRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        $user = $this->user();
+        if (!$user) {
+            return true;
+        }
+
+        if ($user->isSuperadmin()) {
+            return true;
+        }
+
+        $siswa = $this->route('siswa');
+        if ($siswa) {
+            $siswaModel = $siswa instanceof \App\Models\Siswa ? $siswa : \App\Models\Siswa::find($siswa);
+            if ($siswaModel && !$user->canAccessUnit($siswaModel->unit_id)) {
+                return false;
+            }
+        }
+
+        if ($this->has('unit_id') && !$user->canAccessUnit((int)$this->input('unit_id'))) {
+            return false;
+        }
+
         return true;
     }
 

@@ -25,34 +25,60 @@ class KaryawanController extends Controller
 
     public function index(Request $request): Response
     {
+        $user = $request->user();
         $filters = $request->only(['search', 'unit_id', 'role', 'is_aktif', 'per_page']);
+
+        if ($user && $user->isOperator()) {
+            $filters['unit_id'] = (string) $user->unit_id;
+        }
+
         $perPage = (int)$request->input('per_page', 10);
         $karyawan = $this->karyawanService->getPaginated($filters, $perPage);
-        $units = Unit::select('id', 'kode_unit', 'nama_unit')->where('is_aktif', true)->get();
+
+        $unitsQuery = Unit::select('id', 'kode_unit', 'nama_unit')->where('is_aktif', true);
+        if ($user && $user->isOperator()) {
+            $unitsQuery->where('id', $user->unit_id);
+        }
+        $units = $unitsQuery->get();
 
         return Inertia::render('Karyawan/Index', [
             'karyawan' => $karyawan,
             'units' => $units,
             'filters' => $filters,
+            'isOperator' => $user?->isOperator() ?? false,
         ]);
     }
 
     public function store(KaryawanRequest $request): RedirectResponse
     {
-        $this->karyawanService->create($request->validated());
+        $validated = $request->validated();
+        if ($request->user() && $request->user()->isOperator()) {
+            $validated['unit_id'] = $request->user()->unit_id;
+        }
+
+        $this->karyawanService->create($validated);
 
         return redirect()->route('karyawan.index')->with('success', 'Data karyawan/guru berhasil ditambahkan.');
     }
 
     public function update(KaryawanRequest $request, Karyawan $karyawan): RedirectResponse
     {
-        $this->karyawanService->update($karyawan, $request->validated());
+        abort_if(!$request->user()->canAccessUnit($karyawan->unit_id), 403, 'Akses ditolak. Anda tidak memiliki wewenang pada data unit ini.');
+
+        $validated = $request->validated();
+        if ($request->user() && $request->user()->isOperator()) {
+            $validated['unit_id'] = $request->user()->unit_id;
+        }
+
+        $this->karyawanService->update($karyawan, $validated);
 
         return redirect()->route('karyawan.index')->with('success', 'Data karyawan/guru berhasil diperbarui.');
     }
 
-    public function destroy(Karyawan $karyawan): RedirectResponse
+    public function destroy(Request $request, Karyawan $karyawan): RedirectResponse
     {
+        abort_if(!$request->user()->canAccessUnit($karyawan->unit_id), 403, 'Akses ditolak. Anda tidak memiliki wewenang pada data unit ini.');
+
         $this->karyawanService->delete($karyawan);
 
         return redirect()->route('karyawan.index')->with('success', 'Data karyawan/guru berhasil dihapus.');
@@ -60,7 +86,12 @@ class KaryawanController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        return $this->exportService->exportKaryawan($request->all());
+        $filters = $request->all();
+        if ($request->user() && $request->user()->isOperator()) {
+            $filters['unit_id'] = $request->user()->unit_id;
+        }
+
+        return $this->exportService->exportKaryawan($filters);
     }
 
     public function template(): StreamedResponse
@@ -91,8 +122,10 @@ class KaryawanController extends Controller
         return redirect()->route('karyawan.index')->with('success', $msg);
     }
 
-    public function cetak(Karyawan $karyawan): Response
+    public function cetak(Request $request, Karyawan $karyawan): Response
     {
+        abort_if(!$request->user()->canAccessUnit($karyawan->unit_id), 403, 'Akses ditolak. Anda tidak memiliki wewenang pada data unit ini.');
+
         $karyawan->load('unit');
 
         return Inertia::render('Karyawan/Cetak', [

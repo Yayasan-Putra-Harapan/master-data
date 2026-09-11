@@ -9,6 +9,27 @@ class MataPelajaranRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        $user = $this->user();
+        if (!$user) {
+            return true;
+        }
+
+        if ($user->isSuperadmin()) {
+            return true;
+        }
+
+        $mapel = $this->route('mata_pelajaran');
+        if ($mapel) {
+            $mapelModel = $mapel instanceof \App\Models\MataPelajaran ? $mapel : \App\Models\MataPelajaran::find($mapel);
+            if ($mapelModel && !$user->canAccessUnit($mapelModel->unit_id)) {
+                return false;
+            }
+        }
+
+        if ($this->has('unit_id') && !$user->canAccessUnit((int)$this->input('unit_id'))) {
+            return false;
+        }
+
         return true;
     }
 

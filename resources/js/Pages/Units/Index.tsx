@@ -50,9 +50,10 @@ interface Props {
         jenjang?: string;
         is_aktif?: string;
     };
+    isOperator?: boolean;
 }
 
-export default function UnitsIndex({ units, filters }: Props) {
+export default function UnitsIndex({ units, filters, isOperator = false }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [jenjangFilter, setJenjangFilter] = useState(filters.jenjang || 'all');
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -186,9 +187,11 @@ export default function UnitsIndex({ units, filters }: Props) {
                                 Mengelola seluruh unit sekolah di bawah naungan Yayasan Pendidikan Putra Harapan
                             </p>
                         </div>
-                        <Button onClick={openCreateModal} size="sm" className="gap-2">
-                            <Plus className="h-4 w-4" /> Tambah Unit
-                        </Button>
+                        {!isOperator && (
+                            <Button onClick={openCreateModal} size="sm" className="gap-2">
+                                <Plus className="h-4 w-4" /> Tambah Unit
+                            </Button>
+                        )}
                     </CardHeader>
 
                     <CardContent className="space-y-4">
@@ -277,24 +280,28 @@ export default function UnitsIndex({ units, filters }: Props) {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <div className="flex justify-end gap-1">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-neutral-600 hover:text-neutral-900"
-                                                            onClick={() => openEditModal(unit)}
-                                                        >
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-red-600 hover:text-red-700"
-                                                            onClick={() => setDeletingUnit(unit)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
+                                                    {!isOperator ? (
+                                                        <div className="flex justify-end gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-neutral-600 hover:text-neutral-900"
+                                                                onClick={() => openEditModal(unit)}
+                                                            >
+                                                                <Edit2 className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-red-600 hover:text-red-700"
+                                                                onClick={() => setDeletingUnit(unit)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground italic pr-2">Hanya Baca</span>
+                                                    )}
                                                 </TableCell>
                                             </TableRow>
                                         ))

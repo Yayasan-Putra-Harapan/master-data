@@ -23,11 +23,14 @@ class UnitController extends Controller
         return Inertia::render('Units/Index', [
             'units' => $units,
             'filters' => $filters,
+            'isOperator' => $request->user()?->isOperator() ?? false,
         ]);
     }
 
     public function store(UnitRequest $request): RedirectResponse
     {
+        abort_if(!$request->user()->isSuperadmin(), 403, 'Hanya Superadmin Yayasan yang dapat menambahkan unit pendidikan.');
+
         $this->unitService->create($request->validated());
 
         return redirect()->route('units.index')->with('success', 'Unit pendidikan berhasil ditambahkan.');
@@ -35,13 +38,17 @@ class UnitController extends Controller
 
     public function update(UnitRequest $request, Unit $unit): RedirectResponse
     {
+        abort_if(!$request->user()->isSuperadmin(), 403, 'Hanya Superadmin Yayasan yang dapat memperbarui unit pendidikan.');
+
         $this->unitService->update($unit, $request->validated());
 
         return redirect()->route('units.index')->with('success', 'Unit pendidikan berhasil diperbarui.');
     }
 
-    public function destroy(Unit $unit): RedirectResponse
+    public function destroy(Request $request, Unit $unit): RedirectResponse
     {
+        abort_if(!$request->user()->isSuperadmin(), 403, 'Hanya Superadmin Yayasan yang dapat menghapus unit pendidikan.');
+
         $this->unitService->delete($unit);
 
         return redirect()->route('units.index')->with('success', 'Unit pendidikan berhasil dihapus.');

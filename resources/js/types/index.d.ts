@@ -2,6 +2,9 @@ export interface User {
     id: number;
     name: string;
     email: string;
+    role: 'superadmin' | 'operator';
+    unit_id?: number | null;
+    unit?: Unit | null;
     email_verified_at?: string;
 }
 

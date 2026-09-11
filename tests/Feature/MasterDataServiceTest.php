@@ -489,3 +489,129 @@ test('authenticated user can view cetak presensi rombel kelas document', functio
 
     $response->assertStatus(200);
 });
+
+// RBAC (Role-Based Access Control) Tests
+test('superadmin can access user management page', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    $response = $this->actingAs($superadmin)->get('/users');
+
+    $response->assertStatus(200);
+});
+
+test('operator cannot access user management page (403 forbidden)', function () {
+    $unit = Unit::first() ?? Unit::factory()->create();
+    $operator = User::factory()->operator($unit)->create();
+
+    $response = $this->actingAs($operator)->get('/users');
+
+    $response->assertStatus(403);
+});
+
+test('superadmin can create operator account assigned to unit', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $unit = Unit::first() ?? Unit::factory()->create();
+
+    $response = $this->actingAs($superadmin)->post('/users', [
+        'name' => 'Operator SD Baru',
+        'email' => 'operator.sd@yayasan.ac.id',
+        'password' => 'password123',
+        'role' => 'operator',
+        'unit_id' => $unit->id,
+    ]);
+
+    $response->assertRedirect('/users');
+    $this->assertDatabaseHas('users', [
+        'email' => 'operator.sd@yayasan.ac.id',
+        'role' => 'operator',
+        'unit_id' => $unit->id,
+    ]);
+});
+
+test('operator is scoped to their unit on siswa index', function () {
+    $unitA = Unit::first() ?? Unit::factory()->create();
+    $unitB = Unit::where('id', '!=', $unitA->id)->first() ?? Unit::factory()->create();
+
+    $operatorA = User::factory()->operator($unitA)->create();
+
+    $siswaA = \App\Models\Siswa::factory()->create(['unit_id' => $unitA->id]);
+    $siswaB = \App\Models\Siswa::factory()->create(['unit_id' => $unitB->id]);
+
+    $response = $this->actingAs($operatorA)->get('/siswa');
+
+    $response->assertStatus(200);
+    $response->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+        ->component('Siswa/Index')
+        ->where('isOperator', true)
+        ->has('siswa.data', fn ($assert) => $assert
+            ->each(fn ($item) => $item->where('unit_id', $unitA->id)->etc())
+        )
+    );
+});
+
+test('operator cannot modify student from another unit (403 forbidden)', function () {
+    $unitA = Unit::first() ?? Unit::factory()->create();
+    $unitB = Unit::where('id', '!=', $unitA->id)->first() ?? Unit::factory()->create();
+
+    $operatorA = User::factory()->operator($unitA)->create();
+    $siswaB = \App\Models\Siswa::factory()->create(['unit_id' => $unitB->id]);
+
+    // Update attempt
+    $updateResponse = $this->actingAs($operatorA)->put("/siswa/{$siswaB->id}", [
+        'nisn' => $siswaB->nisn,
+        'nama_lengkap' => 'Nama Ubah Ilegal',
+        'jenis_kelamin' => $siswaB->jenis_kelamin,
+        'tempat_lahir' => $siswaB->tempat_lahir,
+        'tanggal_lahir' => $siswaB->tanggal_lahir->format('Y-m-d'),
+        'unit_id' => $unitB->id,
+        'alamat' => $siswaB->alamat,
+        'angkatan' => $siswaB->angkatan,
+        'status' => $siswaB->status,
+    ]);
+    $updateResponse->assertStatus(403);
+
+    // Delete attempt
+    $deleteResponse = $this->actingAs($operatorA)->delete("/siswa/{$siswaB->id}");
+    $deleteResponse->assertStatus(403);
+});
+
+test('operator cannot create unit (403 forbidden)', function () {
+    $unit = Unit::first() ?? Unit::factory()->create();
+    $operator = User::factory()->operator($unit)->create();
+
+    $response = $this->actingAs($operator)->post('/units', [
+        'kode_unit' => 'XYZ',
+        'nama_unit' => 'Unit Ilegal',
+        'jenjang' => 'SD',
+    ]);
+
+    $response->assertStatus(403);
+});
+
+test('superadmin cannot delete their own account', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+
+    $response = $this->actingAs($superadmin)->delete("/users/{$superadmin->id}");
+
+    $response->assertRedirect('/users');
+    $response->assertSessionHas('error');
+    $this->assertDatabaseHas('users', ['id' => $superadmin->id]);
+});
+
+test('superadmin can update user and preserve password when empty', function () {
+    $superadmin = User::factory()->create(['role' => 'superadmin']);
+    $user = User::factory()->create(['password' => 'original_password']);
+    $oldHash = $user->password;
+
+    $response = $this->actingAs($superadmin)->put("/users/{$user->id}", [
+        'name' => 'Nama Baru Diperbarui',
+        'email' => $user->email,
+        'role' => 'superadmin',
+        'password' => '',
+    ]);
+
+    $response->assertRedirect('/users');
+    $user->refresh();
+    expect($user->name)->toBe('Nama Baru Diperbarui');
+    expect($user->password)->toBe($oldHash);
+});

@@ -9,6 +9,27 @@ class KelasRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        $user = $this->user();
+        if (!$user) {
+            return true;
+        }
+
+        if ($user->isSuperadmin()) {
+            return true;
+        }
+
+        $kelas = $this->route('kelas');
+        if ($kelas) {
+            $kelasModel = $kelas instanceof \App\Models\Kelas ? $kelas : \App\Models\Kelas::find($kelas);
+            if ($kelasModel && !$user->canAccessUnit($kelasModel->unit_id)) {
+                return false;
+            }
+        }
+
+        if ($this->has('unit_id') && !$user->canAccessUnit((int)$this->input('unit_id'))) {
+            return false;
+        }
+
         return true;
     }
 

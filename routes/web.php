@@ -14,6 +14,7 @@ use App\Http\Controllers\Web\RuangController;
 use App\Http\Controllers\Web\SiswaController;
 use App\Http\Controllers\Web\TahunAjaranController;
 use App\Http\Controllers\Web\UnitController;
+use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\VendorController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -93,6 +94,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api-tokens', [ApiTokenController::class, 'index'])->name('api-tokens.index');
     Route::post('/api-tokens', [ApiTokenController::class, 'store'])->name('api-tokens.store');
     Route::delete('/api-tokens/{id}', [ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
+
+    // User Management (Superadmin only)
+    Route::resource('users', UserController::class)->except(['create', 'edit', 'show'])->middleware('superadmin');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

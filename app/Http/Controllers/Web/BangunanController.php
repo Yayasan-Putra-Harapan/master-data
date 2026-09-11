@@ -25,34 +25,60 @@ class BangunanController extends Controller
 
     public function index(Request $request): Response
     {
+        $user = $request->user();
         $filters = $request->only(['search', 'unit_id', 'kondisi', 'per_page']);
+
+        if ($user && $user->isOperator()) {
+            $filters['unit_id'] = (string) $user->unit_id;
+        }
+
         $perPage = (int)$request->input('per_page', 10);
         $bangunan = $this->service->getPaginated($filters, $perPage);
-        $units = Unit::select('id', 'kode_unit', 'nama_unit')->where('is_aktif', true)->get();
+
+        $unitsQuery = Unit::select('id', 'kode_unit', 'nama_unit')->where('is_aktif', true);
+        if ($user && $user->isOperator()) {
+            $unitsQuery->where('id', $user->unit_id);
+        }
+        $units = $unitsQuery->get();
 
         return Inertia::render('Bangunan/Index', [
             'bangunan' => $bangunan,
             'units' => $units,
             'filters' => $filters,
+            'isOperator' => $user?->isOperator() ?? false,
         ]);
     }
 
     public function store(BangunanRequest $request): RedirectResponse
     {
-        $this->service->create($request->validated());
+        $validated = $request->validated();
+        if ($request->user() && $request->user()->isOperator()) {
+            $validated['unit_id'] = $request->user()->unit_id;
+        }
+
+        $this->service->create($validated);
 
         return redirect()->route('bangunan.index')->with('success', 'Data gedung/bangunan berhasil ditambahkan.');
     }
 
     public function update(BangunanRequest $request, Bangunan $bangunan): RedirectResponse
     {
-        $this->service->update($bangunan, $request->validated());
+        abort_if(!$request->user()->canAccessUnit($bangunan->unit_id), 403, 'Akses ditolak. Anda tidak memiliki wewenang pada data unit ini.');
+
+        $validated = $request->validated();
+        if ($request->user() && $request->user()->isOperator()) {
+            $validated['unit_id'] = $request->user()->unit_id;
+        }
+
+        $this->service->update($bangunan, $validated);
 
         return redirect()->route('bangunan.index')->with('success', 'Data gedung/bangunan berhasil diperbarui.');
     }
 
-    public function destroy(Bangunan $bangunan): RedirectResponse
+    public function destroy(Request $request, Bangunan $bangunan): RedirectResponse
     {
+        abort_if(!$request->user()->canAccessUnit($bangunan->unit_id), 403, 'Akses ditolak. Anda tidak memiliki wewenang pada data unit ini.');
+
         $this->service->delete($bangunan);
 
         return redirect()->route('bangunan.index')->with('success', 'Data gedung/bangunan berhasil dihapus.');
@@ -60,7 +86,12 @@ class BangunanController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        return $this->exportService->exportBangunan($request->all());
+        $filters = $request->all();
+        if ($request->user() && $request->user()->isOperator()) {
+            $filters['unit_id'] = $request->user()->unit_id;
+        }
+
+        return $this->exportService->exportBangunan($filters);
     }
 
     public function template(): StreamedResponse

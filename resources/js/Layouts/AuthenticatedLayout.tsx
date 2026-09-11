@@ -5,6 +5,7 @@ import { Toaster } from '@/Components/ui/sonner';
 import { toast } from 'sonner';
 import ThemeToggle from '@/Components/ThemeToggle';
 import { Button } from '@/Components/ui/button';
+import { Badge } from '@/Components/ui/badge';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -32,6 +33,7 @@ import {
     Code2,
     ExternalLink,
     KeyRound,
+    UserCog,
 } from 'lucide-react';
 
 let lastHandledSuccess: string | null = null;
@@ -131,6 +133,8 @@ export default function AuthenticatedLayout({
         },
     ];
 
+    const isSuperadmin = auth.user.role === 'superadmin';
+
     const apiNavigation = [
         {
             name: 'Akses API Token',
@@ -138,6 +142,16 @@ export default function AuthenticatedLayout({
             icon: KeyRound,
             current: route().current('api-tokens.*'),
         },
+        ...(isSuperadmin
+            ? [
+                  {
+                      name: 'Kelola Pengguna',
+                      href: route('users.index'),
+                      icon: UserCog,
+                      current: route().current('users.*'),
+                  },
+              ]
+            : []),
     ];
 
     return (
@@ -242,10 +256,15 @@ export default function AuthenticatedLayout({
                     </a>
 
                     <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-                        <p className="font-semibold text-foreground">
-                            Master Data Service
-                        </p>
-                        <p>10 Entitas Terintegrasi</p>
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-foreground">
+                                {isSuperadmin ? 'Superadmin' : `Operator ${auth.user.unit?.kode_unit || 'Unit'}`}
+                            </span>
+                            <Badge variant={isSuperadmin ? 'default' : 'secondary'} className="text-[9px] h-4 py-0">
+                                {isSuperadmin ? 'Global' : auth.user.unit?.kode_unit || 'Unit'}
+                            </Badge>
+                        </div>
+                        <p>{isSuperadmin ? 'Otoritas Seluruh Unit' : auth.user.unit?.nama_unit || 'Operator Satuan'}</p>
                     </div>
                 </div>
             </aside>
@@ -274,13 +293,21 @@ export default function AuthenticatedLayout({
                                 <Button variant="outline" size="sm" className="gap-2">
                                     <UserIcon className="h-4 w-4" />
                                     <span>{auth.user.name}</span>
+                                    <Badge variant={isSuperadmin ? 'default' : 'secondary'} className="text-[10px] h-4 py-0 ml-1">
+                                        {isSuperadmin ? 'Admin' : auth.user.unit?.kode_unit || 'Operator'}
+                                    </Badge>
                                     <ChevronDown className="h-3 w-3 opacity-60" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuContent align="end" className="w-60">
                                 <DropdownMenuLabel className="font-normal">
-                                    <div className="flex flex-col space-y-1">
-                                        <p className="text-xs text-muted-foreground">Signed in as</p>
+                                    <div className="flex flex-col space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-xs text-muted-foreground">Signed in as</p>
+                                            <Badge variant={isSuperadmin ? 'default' : 'secondary'} className="text-[10px] h-4 py-0">
+                                                {isSuperadmin ? 'Superadmin Yayasan' : `Operator ${auth.user.unit?.kode_unit || ''}`}
+                                            </Badge>
+                                        </div>
                                         <p className="text-xs font-semibold leading-none truncate">{auth.user.email}</p>
                                     </div>
                                 </DropdownMenuLabel>
@@ -291,6 +318,14 @@ export default function AuthenticatedLayout({
                                         <span>Profile Akun</span>
                                     </Link>
                                 </DropdownMenuItem>
+                                {isSuperadmin && (
+                                    <DropdownMenuItem asChild>
+                                        <Link href={route('users.index')} className="flex w-full items-center cursor-pointer">
+                                            <UserCog className="mr-2 h-4 w-4" />
+                                            <span>Kelola Pengguna (RBAC)</span>
+                                        </Link>
+                                    </DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem asChild>
                                     <Link href={route('api-tokens.index')} className="flex w-full items-center cursor-pointer">
                                         <KeyRound className="mr-2 h-4 w-4" />
