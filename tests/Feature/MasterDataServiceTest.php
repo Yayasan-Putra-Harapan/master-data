@@ -118,23 +118,21 @@ test('siswa validation enforces validity: rejects non-10 digit nisn', function (
 
 test('siswa validation enforces accuracy: rejects illogical age for PG', function () {
     $user = User::factory()->create();
-    $pgUnit = Unit::where('jenjang', 'PG')->first();
+    $pgUnit = Unit::where('jenjang', 'PG')->first() ?? Unit::factory()->create(['jenjang' => 'PG', 'kode_unit' => 'PG_TEST']);
 
-    if ($pgUnit) {
-        $response = $this->actingAs($user)->post('/siswa', [
-            'nisn' => '9999888877',
-            'nama_lengkap' => 'Dewasa Masuk PG',
-            'jenis_kelamin' => 'L',
-            'tempat_lahir' => 'Purwokerto',
-            'tanggal_lahir' => '2005-01-01', // 21 years old for Playgroup!
-            'unit_id' => $pgUnit->id,
-            'alamat' => 'Jl. Sudirman',
-            'angkatan' => 2024,
-            'status' => 'aktif',
-        ]);
+    $response = $this->actingAs($user)->post('/siswa', [
+        'nisn' => '9999888877',
+        'nama_lengkap' => 'Dewasa Masuk PG',
+        'jenis_kelamin' => 'L',
+        'tempat_lahir' => 'Purwokerto',
+        'tanggal_lahir' => '2005-01-01', // 21 years old for Playgroup!
+        'unit_id' => $pgUnit->id,
+        'alamat' => 'Jl. Sudirman',
+        'angkatan' => 2024,
+        'status' => 'aktif',
+    ]);
 
-        $response->assertSessionHasErrors('tanggal_lahir');
-    }
+    $response->assertSessionHasErrors('tanggal_lahir');
 });
 
 // Increment 2 Tests
