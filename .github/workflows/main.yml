@@ -1,0 +1,27 @@
+name: Deploy Master Data (Docker)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Load Environment Variables
+        run: |
+          cp /opt/configs/master-data/.env .env
+
+      - name: Build and Restart Containers
+        run: |
+          docker compose down --remove-orphans
+          docker compose up -d --build
+
+      - name: Prune Dangling Docker Images
+        run: |
+          docker image prune -f
