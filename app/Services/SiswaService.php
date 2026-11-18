@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Siswa;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class SiswaService
 {
@@ -38,17 +40,49 @@ class SiswaService
 
     public function create(array $data): Siswa
     {
-        return Siswa::create($data);
+        if (isset($data['foto']) && $data['foto'] instanceof UploadedFile) {
+            $data['foto'] = $data['foto']->store('siswa', 'public');
+        }
+
+        $siswa = Siswa::create($data);
+
+        ActivityLogger::log('create', "Menambahkan data siswa: {$siswa->nama_lengkap} (NISN: {$siswa->nisn})", $siswa, [
+            'nisn' => $siswa->nisn,
+            'unit_id' => $siswa->unit_id,
+        ]);
+
+        return $siswa;
     }
 
     public function update(Siswa $siswa, array $data): Siswa
     {
+        if (isset($data['foto']) && $data['foto'] instanceof UploadedFile) {
+            if ($siswa->foto && Storage::disk('public')->exists($siswa->foto)) {
+                Storage::disk('public')->delete($siswa->foto);
+            }
+            $data['foto'] = $data['foto']->store('siswa', 'public');
+        } elseif (array_key_exists('foto', $data) && is_null($data['foto'])) {
+            if ($siswa->foto && Storage::disk('public')->exists($siswa->foto)) {
+                Storage::disk('public')->delete($siswa->foto);
+            }
+            $data['foto'] = null;
+        }
+
         $siswa->update($data);
+
+        ActivityLogger::log('update', "Memperbarui data siswa: {$siswa->nama_lengkap} (NISN: {$siswa->nisn})", $siswa);
+
         return $siswa;
     }
 
     public function delete(Siswa $siswa): bool
     {
+        if ($siswa->foto && Storage::disk('public')->exists($siswa->foto)) {
+            Storage::disk('public')->delete($siswa->foto);
+        }
+
+        ActivityLogger::log('delete', "Menghapus data siswa: {$siswa->nama_lengkap} (NISN: {$siswa->nisn})", $siswa);
+
         return $siswa->delete();
     }
 }

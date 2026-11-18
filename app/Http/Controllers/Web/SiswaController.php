@@ -55,9 +55,13 @@ class SiswaController extends Controller
 
     public function store(SiswaRequest $request): RedirectResponse
     {
-        $validated = $request->validated();
+        $validated = $request->safe()->except(['foto', 'hapus_foto']);
         if ($request->user() && $request->user()->isOperator()) {
             $validated['unit_id'] = $request->user()->unit_id;
+        }
+
+        if ($request->hasFile('foto')) {
+            $validated['foto'] = $request->file('foto');
         }
 
         $this->siswaService->create($validated);
@@ -69,9 +73,15 @@ class SiswaController extends Controller
     {
         abort_if(!$request->user()->canAccessUnit($siswa->unit_id), 403, 'Akses ditolak. Anda tidak memiliki wewenang pada data unit ini.');
 
-        $validated = $request->validated();
+        $validated = $request->safe()->except(['foto', 'hapus_foto']);
         if ($request->user() && $request->user()->isOperator()) {
             $validated['unit_id'] = $request->user()->unit_id;
+        }
+
+        if ($request->hasFile('foto')) {
+            $validated['foto'] = $request->file('foto');
+        } elseif ($request->boolean('hapus_foto')) {
+            $validated['foto'] = null;
         }
 
         $this->siswaService->update($siswa, $validated);

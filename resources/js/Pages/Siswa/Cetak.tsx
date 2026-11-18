@@ -230,10 +230,20 @@ export default function SiswaCetak({ siswa }: Props) {
                 {/* Signatures & Photo Box */}
                 <div className="mt-10 pt-4 flex items-end justify-between text-xs sm:text-sm">
                     {/* 3x4 Photo Box */}
-                    <div className="h-32 w-24 border-2 border-dashed border-neutral-400 flex flex-col items-center justify-center text-center text-[10px] text-neutral-400">
-                        <span>Pas Foto</span>
-                        <span>3 x 4 cm</span>
-                    </div>
+                    {siswa.foto_url ? (
+                        <div className="h-32 w-24 border border-neutral-800 p-0.5 bg-white shadow-xs">
+                            <img
+                                src={siswa.foto_url}
+                                alt={siswa.nama_lengkap}
+                                className="h-full w-full object-cover"
+                            />
+                        </div>
+                    ) : (
+                        <div className="h-32 w-24 border-2 border-dashed border-neutral-400 flex flex-col items-center justify-center text-center text-[10px] text-neutral-400">
+                            <span>Pas Foto</span>
+                            <span>3 x 4 cm</span>
+                        </div>
+                    )}
 
                     {/* Signature 1: Parent */}
                     <div className="text-center w-48">

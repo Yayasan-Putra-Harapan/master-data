@@ -31,12 +31,22 @@ class Siswa extends Model
         'alamat',
         'angkatan',
         'status',
+        'foto',
+    ];
+
+    protected $appends = [
+        'foto_url',
     ];
 
     protected $casts = [
         'tanggal_lahir' => 'date',
         'angkatan' => 'integer',
     ];
+
+    public function getFotoUrlAttribute(): ?string
+    {
+        return $this->foto ? asset('storage/' . $this->foto) : null;
+    }
 
     public function unit(): BelongsTo
     {

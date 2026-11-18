@@ -55,6 +55,8 @@ class SiswaRequest extends FormRequest
             'alamat' => ['required', 'string', 'max:500'],
             'angkatan' => ['required', 'integer', 'between:2010,2035'],
             'status' => ['required', \Illuminate\Validation\Rule::in(['aktif', 'lulus', 'mutasi', 'keluar'])],
+            'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'hapus_foto' => ['nullable', 'boolean'],
         ];
     }
 
@@ -70,20 +72,20 @@ class SiswaRequest extends FormRequest
                     $age = \Carbon\Carbon::parse($tanggalLahir)->age;
                     $minAge = match ($unit->jenjang) {
                         'PG' => 2,
-                        'TK' => 4,
-                        'SD' => 6,
-                        'SMP' => 11,
-                        'SMA' => 14,
-                        'BOARDING' => 11,
+                        'TK' => 3,
+                        'SD' => 5,
+                        'SMP' => 10,
+                        'SMA' => 13,
+                        'BOARDING' => 10,
                         default => 0,
                     };
                     $maxAge = match ($unit->jenjang) {
-                        'PG' => 6,
-                        'TK' => 8,
-                        'SD' => 14,
-                        'SMP' => 18,
-                        'SMA' => 21,
-                        'BOARDING' => 21,
+                        'PG' => 8,
+                        'TK' => 10,
+                        'SD' => 16,
+                        'SMP' => 20,
+                        'SMA' => 22,
+                        'BOARDING' => 22,
                         default => 100,
                     };
 
@@ -107,6 +109,9 @@ class SiswaRequest extends FormRequest
             'unit_id.exists' => 'Unit sekolah yang dipilih tidak ditemukan.',
             'orang_tua_id.exists' => 'Data orang tua/wali tidak valid.',
             'alamat.required' => 'Alamat tinggal siswa wajib diisi.',
+            'foto.image' => 'Berkas pas foto harus berupa gambar.',
+            'foto.mimes' => 'Format pas foto harus berupa jpeg, jpg, png, atau webp.',
+            'foto.max' => 'Ukuran pas foto maksimal 2MB.',
         ];
     }
 }

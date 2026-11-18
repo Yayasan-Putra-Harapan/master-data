@@ -31,6 +31,11 @@ class Karyawan extends Model
         'pendidikan_terakhir',
         'tanggal_masuk',
         'is_aktif',
+        'foto',
+    ];
+
+    protected $appends = [
+        'foto_url',
     ];
 
     protected $casts = [
@@ -38,6 +43,11 @@ class Karyawan extends Model
         'tanggal_masuk' => 'date',
         'is_aktif' => 'boolean',
     ];
+
+    public function getFotoUrlAttribute(): ?string
+    {
+        return $this->foto ? asset('storage/' . $this->foto) : null;
+    }
 
     public function unit(): BelongsTo
     {

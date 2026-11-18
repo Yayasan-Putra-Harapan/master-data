@@ -36,17 +36,21 @@ class KelasService
 
     public function create(array $data): Kelas
     {
-        return Kelas::create($data);
+        $item = Kelas::create($data);
+        ActivityLogger::log('create', "Menambahkan rombel kelas: {$item->nama_kelas} ({$item->kode_kelas})", $item);
+        return $item;
     }
 
     public function update(Kelas $item, array $data): Kelas
     {
         $item->update($data);
+        ActivityLogger::log('update', "Memperbarui rombel kelas: {$item->nama_kelas} ({$item->kode_kelas})", $item);
         return $item;
     }
 
     public function delete(Kelas $item): bool
     {
+        ActivityLogger::log('delete', "Menghapus rombel kelas: {$item->nama_kelas} ({$item->kode_kelas})", $item);
         return $item->delete();
     }
 }

@@ -105,6 +105,10 @@ class AnggotaKelasService
             }
         });
 
+        ActivityLogger::log('plot', "Memasukkan {$enrolledCount} siswa ke rombel {$kelas->nama_kelas}", $kelas, [
+            'siswa_count' => $enrolledCount,
+        ]);
+
         return [
             'enrolled' => $enrolledCount,
             'current_total' => $currentActiveCount + $enrolledCount,
@@ -125,6 +129,9 @@ class AnggotaKelasService
                 'keterangan' => $keterangan ?: 'Dikeluarkan dari rombel',
             ]);
             $enrollment->delete();
+
+            ActivityLogger::log('delete', "Mengeluarkan siswa (ID: {$siswaId}) dari rombel {$kelas->nama_kelas}", $kelas);
+
             return true;
         }
 
@@ -180,6 +187,12 @@ class AnggotaKelasService
                 $movedCount++;
             }
         });
+
+        ActivityLogger::log('transfer', "Memindahkan {$movedCount} siswa dari {$sourceKelas->nama_kelas} ke {$targetKelas->nama_kelas}", $targetKelas, [
+            'moved_count' => $movedCount,
+            'from_kelas' => $sourceKelas->nama_kelas,
+            'to_kelas' => $targetKelas->nama_kelas,
+        ]);
 
         return [
             'transferred' => $movedCount,

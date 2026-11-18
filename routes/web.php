@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Web\ActivityLogController;
 use App\Http\Controllers\Web\AnggotaKelasController;
 use App\Http\Controllers\Web\ApiTokenController;
 use App\Http\Controllers\Web\BangunanController;
@@ -97,6 +98,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // User Management (Superadmin only)
     Route::resource('users', UserController::class)->except(['create', 'edit', 'show'])->middleware('superadmin');
+
+    // Activity Logs / Audit Trail
+    Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

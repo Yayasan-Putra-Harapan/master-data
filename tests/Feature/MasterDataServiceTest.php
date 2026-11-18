@@ -613,3 +613,303 @@ test('superadmin can update user and preserve password when empty', function () 
     expect($user->name)->toBe('Nama Baru Diperbarui');
     expect($user->password)->toBe($oldHash);
 });
+
+// Photo Upload Tests
+test('authenticated user can upload student photo and view foto_url', function () {
+    \Illuminate\Support\Facades\Storage::fake('public');
+
+    $user = User::factory()->create();
+    $unit = Unit::first() ?? Unit::factory()->create(['jenjang' => 'SD']);
+    $photo = \Illuminate\Http\UploadedFile::fake()->image('pas_foto_siswa.jpg', 300, 400);
+
+    $response = $this->actingAs($user)->post('/siswa', [
+        'nisn' => '0091827364',
+        'nama_lengkap' => 'Siswa Berfoto',
+        'jenis_kelamin' => 'L',
+        'tempat_lahir' => 'Purwokerto',
+        'tanggal_lahir' => '2015-02-10',
+        'unit_id' => $unit->id,
+        'alamat' => 'Jl. Pahlawan',
+        'angkatan' => 2025,
+        'status' => 'aktif',
+        'foto' => $photo,
+    ]);
+
+    $response->assertRedirect('/siswa');
+    $siswa = \App\Models\Siswa::where('nisn', '0091827364')->first();
+    expect($siswa)->not->toBeNull();
+    expect($siswa->foto)->not->toBeNull();
+    expect($siswa->foto_url)->toContain('storage/' . $siswa->foto);
+    \Illuminate\Support\Facades\Storage::disk('public')->assertExists($siswa->foto);
+});
+
+test('authenticated user can update student with photo', function () {
+    \Illuminate\Support\Facades\Storage::fake('public');
+
+    $user = User::factory()->create();
+    $unit = Unit::where('jenjang', 'SD')->first() ?? Unit::factory()->create(['jenjang' => 'SD']);
+    $siswa = \App\Models\Siswa::factory()->create([
+        'unit_id' => $unit->id,
+        'tanggal_lahir' => '2016-01-01',
+    ]);
+    $photo = \Illuminate\Http\UploadedFile::fake()->image('update_foto.jpg', 300, 400);
+
+    $response = $this->actingAs($user)->post("/siswa/{$siswa->id}", [
+        '_method' => 'put',
+        'nisn' => $siswa->nisn,
+        'nis' => $siswa->nis,
+        'nik' => $siswa->nik,
+        'nama_lengkap' => 'Nama Terupdate',
+        'jenis_kelamin' => $siswa->jenis_kelamin,
+        'tempat_lahir' => $siswa->tempat_lahir,
+        'tanggal_lahir' => $siswa->tanggal_lahir->format('Y-m-d'),
+        'unit_id' => $siswa->unit_id,
+        'alamat' => $siswa->alamat,
+        'angkatan' => $siswa->angkatan,
+        'status' => $siswa->status,
+        'foto' => $photo,
+    ]);
+
+    $response->assertRedirect('/siswa');
+    $siswa->refresh();
+    expect($siswa->nama_lengkap)->toBe('Nama Terupdate');
+    expect($siswa->foto)->not->toBeNull();
+    \Illuminate\Support\Facades\Storage::disk('public')->assertExists($siswa->foto);
+});
+
+test('authenticated user can upload employee photo and view foto_url', function () {
+    \Illuminate\Support\Facades\Storage::fake('public');
+
+    $user = User::factory()->create();
+    $unit = Unit::first() ?? Unit::factory()->create(['jenjang' => 'SMP']);
+    $photo = \Illuminate\Http\UploadedFile::fake()->image('pas_foto_guru.jpg', 300, 400);
+
+    $response = $this->actingAs($user)->post('/karyawan', [
+        'nik' => '3302112233445566',
+        'nama' => 'Guru Berfoto, S.Pd.',
+        'jenis_kelamin' => 'P',
+        'tempat_lahir' => 'Banyumas',
+        'tanggal_lahir' => '1990-08-17',
+        'unit_id' => $unit->id,
+        'role' => 'guru',
+        'status_kepegawaian' => 'tetap',
+        'telepon' => '081234567890',
+        'email' => 'guru.foto@yayasan.ac.id',
+        'tanggal_masuk' => '2020-01-01',
+        'foto' => $photo,
+    ]);
+
+    $response->assertRedirect('/karyawan');
+    $karyawan = \App\Models\Karyawan::where('nik', '3302112233445566')->first();
+    expect($karyawan)->not->toBeNull();
+    expect($karyawan->foto)->not->toBeNull();
+    expect($karyawan->foto_url)->toContain('storage/' . $karyawan->foto);
+    \Illuminate\Support\Facades\Storage::disk('public')->assertExists($karyawan->foto);
+});
+
+// Activity Log & Audit Trail Tests
+test('master data operations automatically record activity logs', function () {
+    $user = User::factory()->create(['name' => 'Operator Pengetes', 'role' => 'superadmin']);
+    $unit = Unit::first() ?? Unit::factory()->create();
+
+    $yearOffset = match ($unit->jenjang) {
+        'PG' => 4,
+        'TK' => 5,
+        'SD' => 8,
+        'SMP' => 13,
+        'SMA' => 16,
+        default => 10,
+    };
+    $tanggalLahir = now()->subYears($yearOffset)->format('Y-m-d');
+
+    // Create student
+    $response = $this->actingAs($user)->post('/siswa', [
+        'nisn' => '0088776655',
+        'nama_lengkap' => 'Siswa Pelacak Log',
+        'jenis_kelamin' => 'L',
+        'tempat_lahir' => 'Purwokerto',
+        'tanggal_lahir' => $tanggalLahir,
+        'unit_id' => $unit->id,
+        'alamat' => 'Jl. Logika No. 1',
+        'angkatan' => 2024,
+        'status' => 'aktif',
+    ]);
+
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('activity_logs', [
+        'user_id' => $user->id,
+        'action' => 'create',
+        'subject_type' => 'Siswa',
+    ]);
+
+    $log = \App\Models\ActivityLog::latest('id')->first();
+    expect($log->description)->toContain('Siswa Pelacak Log');
+});
+
+test('authenticated user can view activity logs page via inertia', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get('/activity-logs');
+
+    $response->assertStatus(200);
+});
+
+// Foto Upload Tests for Siswa and Karyawan
+test('can create and update siswa with photo upload and delete photo', function () {
+    \Illuminate\Support\Facades\Storage::fake('public');
+    $user = User::factory()->create(['role' => 'superadmin']);
+    $unit = Unit::first() ?? Unit::factory()->create();
+
+    $yearOffset = match ($unit->jenjang) {
+        'PG' => 4,
+        'TK' => 5,
+        'SD' => 8,
+        'SMP' => 13,
+        'SMA' => 16,
+        default => 10,
+    };
+    $tanggalLahir = now()->subYears($yearOffset)->format('Y-m-d');
+
+    $foto1 = \Illuminate\Http\UploadedFile::fake()->image('foto_siswa_1.jpg');
+
+    // 1. Create with photo
+    $res = $this->actingAs($user)->post('/siswa', [
+        'nisn' => '0099112233',
+        'nama_lengkap' => 'Siswa Berfoto',
+        'jenis_kelamin' => 'L',
+        'tempat_lahir' => 'Purwokerto',
+        'tanggal_lahir' => $tanggalLahir,
+        'unit_id' => $unit->id,
+        'alamat' => 'Jl. Foto Siswa',
+        'angkatan' => 2025,
+        'status' => 'aktif',
+        'foto' => $foto1,
+    ]);
+
+    $res->assertSessionHasNoErrors();
+    $siswa = \App\Models\Siswa::where('nisn', '0099112233')->firstOrFail();
+    expect($siswa->foto)->not->toBeNull();
+    \Illuminate\Support\Facades\Storage::disk('public')->assertExists($siswa->foto);
+    $oldPath = $siswa->foto;
+
+    // 2. Update with new photo (HTTP POST with X-HTTP-Method-Override: PUT)
+    $foto2 = \Illuminate\Http\UploadedFile::fake()->image('foto_siswa_2.png');
+    $res2 = $this->actingAs($user)->post("/siswa/{$siswa->id}", [
+        'nisn' => '0099112233',
+        'nama_lengkap' => 'Siswa Berfoto Update',
+        'jenis_kelamin' => 'L',
+        'tempat_lahir' => 'Purwokerto',
+        'tanggal_lahir' => $tanggalLahir,
+        'unit_id' => $unit->id,
+        'alamat' => 'Jl. Foto Siswa Update',
+        'angkatan' => 2025,
+        'status' => 'aktif',
+        'foto' => $foto2,
+    ], [
+        'X-HTTP-Method-Override' => 'PUT',
+    ]);
+
+    $res2->assertSessionHasNoErrors();
+    $siswa->refresh();
+    expect($siswa->foto)->not->toBe($oldPath);
+    \Illuminate\Support\Facades\Storage::disk('public')->assertExists($siswa->foto);
+    \Illuminate\Support\Facades\Storage::disk('public')->assertMissing($oldPath);
+
+    // 3. Delete photo via hapus_foto
+    $res3 = $this->actingAs($user)->post("/siswa/{$siswa->id}", [
+        'nisn' => '0099112233',
+        'nama_lengkap' => 'Siswa Berfoto Update',
+        'jenis_kelamin' => 'L',
+        'tempat_lahir' => 'Purwokerto',
+        'tanggal_lahir' => $tanggalLahir,
+        'unit_id' => $unit->id,
+        'alamat' => 'Jl. Foto Siswa Update',
+        'angkatan' => 2025,
+        'status' => 'aktif',
+        'hapus_foto' => 1,
+    ], [
+        'X-HTTP-Method-Override' => 'PUT',
+    ]);
+
+    $res3->assertSessionHasNoErrors();
+    $siswa->refresh();
+    expect($siswa->foto)->toBeNull();
+});
+
+test('can create and update karyawan with photo upload and delete photo', function () {
+    \Illuminate\Support\Facades\Storage::fake('public');
+    $user = User::factory()->create(['role' => 'superadmin']);
+    $unit = Unit::first() ?? Unit::factory()->create();
+
+    $foto1 = \Illuminate\Http\UploadedFile::fake()->image('foto_guru_1.jpg');
+
+    // 1. Create with photo
+    $res = $this->actingAs($user)->post('/karyawan', [
+        'nik' => '3302001122334455',
+        'nama' => 'Guru Berfoto',
+        'jenis_kelamin' => 'L',
+        'tanggal_lahir' => '1995-01-01',
+        'unit_id' => $unit->id,
+        'role' => 'guru',
+        'status_kepegawaian' => 'tetap',
+        'telepon' => '081234567890',
+        'email' => 'guru.foto@sekolah.sch.id',
+        'tanggal_masuk' => '2023-01-01',
+        'is_aktif' => 1,
+        'foto' => $foto1,
+    ]);
+
+    $res->assertSessionHasNoErrors();
+    $karyawan = \App\Models\Karyawan::where('nik', '3302001122334455')->firstOrFail();
+    expect($karyawan->foto)->not->toBeNull();
+    \Illuminate\Support\Facades\Storage::disk('public')->assertExists($karyawan->foto);
+    $oldPath = $karyawan->foto;
+
+    // 2. Update with new photo
+    $foto2 = \Illuminate\Http\UploadedFile::fake()->image('foto_guru_2.png');
+    $res2 = $this->actingAs($user)->post("/karyawan/{$karyawan->id}", [
+        'nik' => '3302001122334455',
+        'nama' => 'Guru Berfoto Update',
+        'jenis_kelamin' => 'L',
+        'tanggal_lahir' => '1995-01-01',
+        'unit_id' => $unit->id,
+        'role' => 'guru',
+        'status_kepegawaian' => 'tetap',
+        'telepon' => '081234567890',
+        'email' => 'guru.foto@sekolah.sch.id',
+        'tanggal_masuk' => '2023-01-01',
+        'is_aktif' => 1,
+        'foto' => $foto2,
+    ], [
+        'X-HTTP-Method-Override' => 'PUT',
+    ]);
+
+    $res2->assertSessionHasNoErrors();
+    $karyawan->refresh();
+    expect($karyawan->foto)->not->toBe($oldPath);
+    \Illuminate\Support\Facades\Storage::disk('public')->assertExists($karyawan->foto);
+    \Illuminate\Support\Facades\Storage::disk('public')->assertMissing($oldPath);
+
+    // 3. Delete photo via hapus_foto
+    $res3 = $this->actingAs($user)->post("/karyawan/{$karyawan->id}", [
+        'nik' => '3302001122334455',
+        'nama' => 'Guru Berfoto Update',
+        'jenis_kelamin' => 'L',
+        'tanggal_lahir' => '1995-01-01',
+        'unit_id' => $unit->id,
+        'role' => 'guru',
+        'status_kepegawaian' => 'tetap',
+        'telepon' => '081234567890',
+        'email' => 'guru.foto@sekolah.sch.id',
+        'tanggal_masuk' => '2023-01-01',
+        'is_aktif' => 1,
+        'hapus_foto' => 1,
+    ], [
+        'X-HTTP-Method-Override' => 'PUT',
+    ]);
+
+    $res3->assertSessionHasNoErrors();
+    $karyawan->refresh();
+    expect($karyawan->foto)->toBeNull();
+});

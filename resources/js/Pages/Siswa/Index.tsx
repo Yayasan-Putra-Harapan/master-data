@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router, useForm } from '@inertiajs/react';
+import { toast } from 'sonner';
 import { PaginatedData, Siswa, Unit } from '@/types';
 import Pagination from '@/Components/Pagination';
 import { Button } from '@/Components/ui/button';
@@ -49,6 +50,11 @@ import {
     SelectValue,
 } from '@/Components/ui/select';
 import {
+    Avatar,
+    AvatarFallback,
+    AvatarImage,
+} from '@/Components/ui/avatar';
+import {
     Plus,
     Search,
     Edit2,
@@ -63,6 +69,7 @@ import {
     MapPin,
     School,
     Printer,
+    Camera,
 } from 'lucide-react';
 
 interface Props {
@@ -89,6 +96,9 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
     const [editingSiswa, setEditingSiswa] = useState<Siswa | null>(null);
     const [deletingSiswa, setDeletingSiswa] = useState<Siswa | null>(null);
     const [viewingSiswa, setViewingSiswa] = useState<Siswa | null>(null);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [hapusFoto, setHapusFoto] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const isInitialSearch = useRef(true);
 
@@ -107,7 +117,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
 
     const currentYear = new Date().getFullYear();
 
-    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
+    const { data, setData, post, processing, errors, reset, clearErrors, transform } = useForm({
         nisn: '',
         nis: '',
         nik: '',
@@ -122,6 +132,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
         alamat: '',
         angkatan: currentYear,
         status: 'aktif' as Siswa['status'],
+        foto: null as File | null,
     });
 
     const importForm = useForm({
@@ -144,6 +155,9 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
 
     const openCreateModal = () => {
         setEditingSiswa(null);
+        setPhotoPreview(null);
+        setHapusFoto(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
         reset();
         clearErrors();
         setIsFormOpen(true);
@@ -151,6 +165,9 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
 
     const openEditModal = (item: Siswa) => {
         setEditingSiswa(item);
+        setPhotoPreview(item.foto_url || null);
+        setHapusFoto(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
         clearErrors();
         setData({
             nisn: item.nisn,
@@ -167,21 +184,60 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
             alamat: item.alamat,
             angkatan: item.angkatan,
             status: item.status,
+            foto: null,
         });
         setIsFormOpen(true);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editingSiswa) {
-            put(route('siswa.update', editingSiswa.id), {
-                onSuccess: () => setIsFormOpen(false),
-            });
-        } else {
-            post(route('siswa.store'), {
+            transform((currentData) => ({
+                ...currentData,
+                _method: 'put',
+                hapus_foto: hapusFoto ? 1 : 0,
+            }));
+
+            post(route('siswa.update', editingSiswa.id), {
+                forceFormData: true,
+                preserveScroll: true,
+                headers: {
+                    'X-HTTP-Method-Override': 'PUT',
+                },
                 onSuccess: () => {
                     setIsFormOpen(false);
+                    setPhotoPreview(null);
+                    setHapusFoto(false);
                     reset();
+                },
+                onError: (errs) => {
+                    const firstMsg = Object.values(errs)[0];
+                    if (firstMsg) {
+                        toast.error(String(firstMsg));
+                    }
+                },
+            });
+        } else {
+            transform((currentData) => ({
+                ...currentData,
+                hapus_foto: 0,
+            }));
+
+            post(route('siswa.store'), {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsFormOpen(false);
+                    setPhotoPreview(null);
+                    setHapusFoto(false);
+                    reset();
+                },
+                onError: (errs) => {
+                    const firstMsg = Object.values(errs)[0];
+                    if (firstMsg) {
+                        toast.error(String(firstMsg));
+                    }
                 },
             });
         }
@@ -377,11 +433,21 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                         siswa.data.map((item) => (
                                             <TableRow key={item.id}>
                                                 <TableCell>
-                                                    <div className="font-medium text-foreground">
-                                                        {item.nama_lengkap} ({item.jenis_kelamin})
-                                                    </div>
-                                                    <div className="text-[11px] text-muted-foreground font-mono">
-                                                        NISN: {item.nisn} {item.nis ? `• NIS: ${item.nis}` : ''}
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar className="h-9 w-9 border border-border shrink-0">
+                                                            {item.foto_url && <AvatarImage src={item.foto_url} alt={item.nama_lengkap} />}
+                                                            <AvatarFallback className="text-xs font-semibold uppercase bg-muted">
+                                                                {item.nama_lengkap.substring(0, 2)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div>
+                                                            <div className="font-medium text-foreground">
+                                                                {item.nama_lengkap} ({item.jenis_kelamin})
+                                                            </div>
+                                                            <div className="text-[11px] text-muted-foreground font-mono">
+                                                                NISN: {item.nisn} {item.nis ? `• NIS: ${item.nis}` : ''}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -474,10 +540,13 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
             <Sheet open={!!viewingSiswa} onOpenChange={() => setViewingSiswa(null)}>
                 <SheetContent className="overflow-y-auto sm:max-w-md">
                     <SheetHeader>
-                        <div className="flex items-center gap-2">
-                            <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                                <GraduationCap className="h-5 w-5" />
-                            </div>
+                        <div className="flex items-center gap-3">
+                            <Avatar className="h-12 w-12 border border-border shrink-0">
+                                {viewingSiswa?.foto_url && <AvatarImage src={viewingSiswa.foto_url} alt={viewingSiswa.nama_lengkap} />}
+                                <AvatarFallback className="text-sm font-semibold uppercase bg-muted">
+                                    {viewingSiswa?.nama_lengkap?.substring(0, 2)}
+                                </AvatarFallback>
+                            </Avatar>
                             <div>
                                 <SheetTitle className="text-base">{viewingSiswa?.nama_lengkap}</SheetTitle>
                                 <SheetDescription className="text-xs">
@@ -652,7 +721,18 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
             </Dialog>
 
             {/* Create/Edit Form Dialog */}
-            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <Dialog
+                open={isFormOpen}
+                onOpenChange={(open) => {
+                    setIsFormOpen(open);
+                    if (!open) {
+                        setPhotoPreview(null);
+                        setHapusFoto(false);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                        clearErrors();
+                    }
+                }}
+            >
                 <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>
@@ -664,6 +744,52 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Pas Foto Siswa */}
+                        <div className="flex items-center gap-4 rounded-lg border p-3 bg-muted/20">
+                            <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded border border-border bg-muted flex items-center justify-center">
+                                {photoPreview ? (
+                                    <img src={photoPreview} alt="Preview" className="h-full w-full object-cover" />
+                                ) : (
+                                    <Camera className="h-5 w-5 text-muted-foreground" />
+                                )}
+                            </div>
+                            <div className="flex-1 space-y-1">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="siswa-foto" className="text-xs">Pas Foto Siswa (Opsional, Maks 2MB)</Label>
+                                    {photoPreview && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (editingSiswa) setHapusFoto(true);
+                                                setData('foto', null);
+                                                setPhotoPreview(null);
+                                                if (fileInputRef.current) fileInputRef.current.value = '';
+                                            }}
+                                            className="text-[11px] text-destructive hover:underline cursor-pointer"
+                                        >
+                                            Hapus Foto
+                                        </button>
+                                    )}
+                                </div>
+                                <Input
+                                    ref={fileInputRef}
+                                    id="siswa-foto"
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0] || null;
+                                        setData('foto', file);
+                                        setHapusFoto(false);
+                                        if (file) {
+                                            setPhotoPreview(URL.createObjectURL(file));
+                                        }
+                                    }}
+                                    className="text-xs cursor-pointer"
+                                />
+                                {errors.foto && <p className="text-xs text-destructive">{errors.foto}</p>}
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <Label htmlFor="nisn">NISN (10 Digit) *</Label>
@@ -843,7 +969,7 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                             >
                                 Batal
                             </Button>
-                            <Button type="submit" disabled={processing}>
+                            <Button type="submit" disabled={processing} className="cursor-pointer">
                                 {processing ? 'Menyimpan...' : 'Simpan'}
                             </Button>
                         </DialogFooter>

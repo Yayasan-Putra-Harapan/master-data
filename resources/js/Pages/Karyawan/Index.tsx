@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router, useForm } from '@inertiajs/react';
+import { toast } from 'sonner';
 import { Karyawan, PaginatedData, Unit } from '@/types';
 import Pagination from '@/Components/Pagination';
 import { Button } from '@/Components/ui/button';
@@ -49,6 +50,11 @@ import {
     SelectValue,
 } from '@/Components/ui/select';
 import {
+    Avatar,
+    AvatarFallback,
+    AvatarImage,
+} from '@/Components/ui/avatar';
+import {
     Plus,
     Search,
     Edit2,
@@ -65,6 +71,7 @@ import {
     School,
     Calendar,
     Printer,
+    Camera,
 } from 'lucide-react';
 
 interface Props {
@@ -90,6 +97,9 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
     const [editingKaryawan, setEditingKaryawan] = useState<Karyawan | null>(null);
     const [deletingKaryawan, setDeletingKaryawan] = useState<Karyawan | null>(null);
     const [viewingKaryawan, setViewingKaryawan] = useState<Karyawan | null>(null);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+    const [hapusFoto, setHapusFoto] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const isInitialSearch = useRef(true);
 
@@ -106,7 +116,7 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
         return () => clearTimeout(timer);
     }, [search]);
 
-    const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
+    const { data, setData, post, processing, errors, reset, clearErrors, transform } = useForm({
         nip: '',
         nuptk: '',
         nik: '',
@@ -123,6 +133,7 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
         pendidikan_terakhir: '',
         tanggal_masuk: new Date().toISOString().split('T')[0],
         is_aktif: true,
+        foto: null as File | null,
     });
 
     const importForm = useForm({
@@ -145,6 +156,9 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
 
     const openCreateModal = () => {
         setEditingKaryawan(null);
+        setPhotoPreview(null);
+        setHapusFoto(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
         reset();
         clearErrors();
         setIsFormOpen(true);
@@ -152,6 +166,9 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
 
     const openEditModal = (item: Karyawan) => {
         setEditingKaryawan(item);
+        setPhotoPreview(item.foto_url || null);
+        setHapusFoto(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
         clearErrors();
         setData({
             nip: item.nip || '',
@@ -170,21 +187,60 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
             pendidikan_terakhir: item.pendidikan_terakhir || '',
             tanggal_masuk: item.tanggal_masuk ? item.tanggal_masuk.substring(0, 10) : '',
             is_aktif: item.is_aktif,
+            foto: null,
         });
         setIsFormOpen(true);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editingKaryawan) {
-            put(route('karyawan.update', editingKaryawan.id), {
-                onSuccess: () => setIsFormOpen(false),
-            });
-        } else {
-            post(route('karyawan.store'), {
+            transform((currentData) => ({
+                ...currentData,
+                _method: 'put',
+                hapus_foto: hapusFoto ? 1 : 0,
+            }));
+
+            post(route('karyawan.update', editingKaryawan.id), {
+                forceFormData: true,
+                preserveScroll: true,
+                headers: {
+                    'X-HTTP-Method-Override': 'PUT',
+                },
                 onSuccess: () => {
                     setIsFormOpen(false);
+                    setPhotoPreview(null);
+                    setHapusFoto(false);
                     reset();
+                },
+                onError: (errs) => {
+                    const firstMsg = Object.values(errs)[0];
+                    if (firstMsg) {
+                        toast.error(String(firstMsg));
+                    }
+                },
+            });
+        } else {
+            transform((currentData) => ({
+                ...currentData,
+                hapus_foto: 0,
+            }));
+
+            post(route('karyawan.store'), {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsFormOpen(false);
+                    setPhotoPreview(null);
+                    setHapusFoto(false);
+                    reset();
+                },
+                onError: (errs) => {
+                    const firstMsg = Object.values(errs)[0];
+                    if (firstMsg) {
+                        toast.error(String(firstMsg));
+                    }
                 },
             });
         }
@@ -368,11 +424,21 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
                                         karyawan.data.map((item) => (
                                             <TableRow key={item.id}>
                                                 <TableCell>
-                                                    <div className="font-medium text-foreground">
-                                                        {item.nama} ({item.jenis_kelamin})
-                                                    </div>
-                                                    <div className="text-[11px] text-muted-foreground font-mono">
-                                                        NIK: {item.nik} {item.nip ? `• NIP: ${item.nip}` : ''}
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar className="h-9 w-9 border border-border shrink-0">
+                                                            {item.foto_url && <AvatarImage src={item.foto_url} alt={item.nama} />}
+                                                            <AvatarFallback className="text-xs font-semibold uppercase bg-muted">
+                                                                {item.nama.substring(0, 2)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div>
+                                                            <div className="font-medium text-foreground">
+                                                                {item.nama} ({item.jenis_kelamin})
+                                                            </div>
+                                                            <div className="text-[11px] text-muted-foreground font-mono">
+                                                                NIK: {item.nik} {item.nip ? `• NIP: ${item.nip}` : ''}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
@@ -462,10 +528,13 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
             <Sheet open={!!viewingKaryawan} onOpenChange={() => setViewingKaryawan(null)}>
                 <SheetContent className="overflow-y-auto sm:max-w-md">
                     <SheetHeader>
-                        <div className="flex items-center gap-2">
-                            <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                                <Users className="h-5 w-5" />
-                            </div>
+                        <div className="flex items-center gap-3">
+                            <Avatar className="h-12 w-12 border border-border shrink-0">
+                                {viewingKaryawan?.foto_url && <AvatarImage src={viewingKaryawan.foto_url} alt={viewingKaryawan.nama} />}
+                                <AvatarFallback className="text-sm font-semibold uppercase bg-muted">
+                                    {viewingKaryawan?.nama?.substring(0, 2)}
+                                </AvatarFallback>
+                            </Avatar>
                             <div>
                                 <SheetTitle className="text-base">{viewingKaryawan?.nama}</SheetTitle>
                                 <SheetDescription className="text-xs">
@@ -649,7 +718,18 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
             </Dialog>
 
             {/* Form Dialog */}
-            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <Dialog
+                open={isFormOpen}
+                onOpenChange={(open) => {
+                    setIsFormOpen(open);
+                    if (!open) {
+                        setPhotoPreview(null);
+                        setHapusFoto(false);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                        clearErrors();
+                    }
+                }}
+            >
                 <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>
@@ -661,6 +741,52 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* Pas Foto Karyawan */}
+                        <div className="flex items-center gap-4 rounded-lg border p-3 bg-muted/20">
+                            <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded border border-border bg-muted flex items-center justify-center">
+                                {photoPreview ? (
+                                    <img src={photoPreview} alt="Preview" className="h-full w-full object-cover" />
+                                ) : (
+                                    <Camera className="h-5 w-5 text-muted-foreground" />
+                                )}
+                            </div>
+                            <div className="flex-1 space-y-1">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="karyawan-foto" className="text-xs">Pas Foto Pegawai (Opsional, Maks 2MB)</Label>
+                                    {photoPreview && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (editingKaryawan) setHapusFoto(true);
+                                                setData('foto', null);
+                                                setPhotoPreview(null);
+                                                if (fileInputRef.current) fileInputRef.current.value = '';
+                                            }}
+                                            className="text-[11px] text-destructive hover:underline cursor-pointer"
+                                        >
+                                            Hapus Foto
+                                        </button>
+                                    )}
+                                </div>
+                                <Input
+                                    ref={fileInputRef}
+                                    id="karyawan-foto"
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0] || null;
+                                        setData('foto', file);
+                                        setHapusFoto(false);
+                                        if (file) {
+                                            setPhotoPreview(URL.createObjectURL(file));
+                                        }
+                                    }}
+                                    className="text-xs cursor-pointer"
+                                />
+                                {errors.foto && <p className="text-xs text-destructive">{errors.foto}</p>}
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <Label htmlFor="nik">NIK KTP (16 Digit) *</Label>

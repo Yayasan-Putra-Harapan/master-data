@@ -43,7 +43,14 @@ class UserService
             'email_verified_at' => now(),
         ];
 
-        return User::create($attributes);
+        $user = User::create($attributes);
+
+        ActivityLogger::log('create', "Membuat akun pengguna: {$user->name} ({$user->email})", $user, [
+            'role' => $user->role,
+            'unit_id' => $user->unit_id,
+        ]);
+
+        return $user;
     }
 
     public function update(User $user, array $data): User
@@ -60,6 +67,9 @@ class UserService
         }
 
         $user->update($attributes);
+
+        ActivityLogger::log('update', "Memperbarui akun pengguna: {$user->name} ({$user->email})", $user);
+
         return $user;
     }
 
@@ -75,6 +85,8 @@ class UserService
                 throw new InvalidArgumentException("Tidak dapat menghapus superadmin terakhir.");
             }
         }
+
+        ActivityLogger::log('delete', "Menghapus akun pengguna: {$targetUser->name} ({$targetUser->email})", $targetUser);
 
         return (bool) $targetUser->delete();
     }

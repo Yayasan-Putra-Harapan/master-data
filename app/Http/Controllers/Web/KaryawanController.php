@@ -51,9 +51,13 @@ class KaryawanController extends Controller
 
     public function store(KaryawanRequest $request): RedirectResponse
     {
-        $validated = $request->validated();
+        $validated = $request->safe()->except(['foto', 'hapus_foto']);
         if ($request->user() && $request->user()->isOperator()) {
             $validated['unit_id'] = $request->user()->unit_id;
+        }
+
+        if ($request->hasFile('foto')) {
+            $validated['foto'] = $request->file('foto');
         }
 
         $this->karyawanService->create($validated);
@@ -65,9 +69,15 @@ class KaryawanController extends Controller
     {
         abort_if(!$request->user()->canAccessUnit($karyawan->unit_id), 403, 'Akses ditolak. Anda tidak memiliki wewenang pada data unit ini.');
 
-        $validated = $request->validated();
+        $validated = $request->safe()->except(['foto', 'hapus_foto']);
         if ($request->user() && $request->user()->isOperator()) {
             $validated['unit_id'] = $request->user()->unit_id;
+        }
+
+        if ($request->hasFile('foto')) {
+            $validated['foto'] = $request->file('foto');
+        } elseif ($request->boolean('hapus_foto')) {
+            $validated['foto'] = null;
         }
 
         $this->karyawanService->update($karyawan, $validated);

@@ -33,6 +33,7 @@ class KaryawanResource extends JsonResource
             'pendidikan_terakhir' => $this->pendidikan_terakhir,
             'tanggal_masuk' => $this->tanggal_masuk?->format('Y-m-d'),
             'is_aktif' => (bool)$this->is_aktif,
+            'foto_url' => $this->foto_url,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

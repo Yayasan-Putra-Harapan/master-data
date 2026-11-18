@@ -57,6 +57,8 @@ class KaryawanRequest extends FormRequest
             'pendidikan_terakhir' => ['nullable', 'string', 'max:50'],
             'tanggal_masuk' => ['required', 'date'],
             'is_aktif' => ['boolean'],
+            'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
+            'hapus_foto' => ['nullable', 'boolean'],
         ];
     }
 
@@ -71,6 +73,9 @@ class KaryawanRequest extends FormRequest
             'unit_id.exists' => 'Unit sekolah yang dipilih tidak valid atau tidak ditemukan.',
             'tanggal_lahir.before_or_equal' => 'Usia karyawan minimal harus 17 tahun.',
             'telepon.regex' => 'Format nomor telepon tidak valid (contoh: 081234567890).',
+            'foto.image' => 'Berkas pas foto harus berupa gambar.',
+            'foto.mimes' => 'Format pas foto harus berupa jpeg, jpg, png, atau webp.',
+            'foto.max' => 'Ukuran pas foto maksimal 2MB.',
         ];
     }
 }

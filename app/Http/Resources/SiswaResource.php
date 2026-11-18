@@ -32,6 +32,7 @@ class SiswaResource extends JsonResource
             'alamat' => $this->alamat,
             'angkatan' => $this->angkatan,
             'status' => $this->status,
+            'foto_url' => $this->foto_url,
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

@@ -21,6 +21,20 @@ class SiswaFactory extends Factory
     {
         $gender = $this->faker->randomElement(['L', 'P']);
         $fakerGender = $gender === 'L' ? 'male' : 'female';
+        $unit = \App\Models\Unit::inRandomOrder()->first();
+        $unitId = $unit?->id ?? \App\Models\Unit::factory();
+        $jenjang = $unit?->jenjang ?? 'SD';
+
+        $yearOffset = match ($jenjang) {
+            'PG' => '-4 years',
+            'TK' => '-6 years',
+            'SD' => '-10 years',
+            'SMP' => '-14 years',
+            'SMA' => '-17 years',
+            'BOARDING' => '-16 years',
+            default => '-10 years',
+        };
+
         return [
             'nisn' => $this->faker->unique()->numerify('00########'),
             'nis' => $this->faker->unique()->numerify('2024####'),
@@ -29,9 +43,9 @@ class SiswaFactory extends Factory
             'nama_panggilan' => $this->faker->firstName($fakerGender),
             'jenis_kelamin' => $gender,
             'tempat_lahir' => $this->faker->city(),
-            'tanggal_lahir' => $this->faker->dateTimeBetween('-17 years', '-4 years')->format('Y-m-d'),
+            'tanggal_lahir' => $this->faker->dateTimeBetween("{$yearOffset} -1 year", "{$yearOffset} +1 year")->format('Y-m-d'),
             'agama' => 'Islam',
-            'unit_id' => \App\Models\Unit::inRandomOrder()->value('id') ?? \App\Models\Unit::factory(),
+            'unit_id' => $unitId,
             'orang_tua_id' => \App\Models\OrangTua::inRandomOrder()->value('id') ?? \App\Models\OrangTua::factory(),
             'alamat' => $this->faker->address(),
             'angkatan' => $this->faker->numberBetween(2022, 2026),

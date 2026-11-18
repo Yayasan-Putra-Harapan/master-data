@@ -61,6 +61,8 @@ export interface Karyawan {
     pendidikan_terakhir?: string;
     tanggal_masuk: string;
     is_aktif: boolean;
+    foto?: string | null;
+    foto_url?: string | null;
 }
 
 export interface Siswa {
@@ -81,6 +83,8 @@ export interface Siswa {
     alamat: string;
     angkatan: number;
     status: 'aktif' | 'lulus' | 'mutasi' | 'keluar';
+    foto?: string | null;
+    foto_url?: string | null;
 }
 
 export interface TahunAjaran {
@@ -175,6 +179,20 @@ export interface ApiToken {
     name: string;
     last_used_at: string | null;
     created_at: string | null;
+}
+
+export interface ActivityLog {
+    id: number;
+    user_id: number | null;
+    user_name: string | null;
+    action: string;
+    subject_type: string | null;
+    subject_id: number | null;
+    description: string;
+    properties: Record<string, any> | null;
+    ip_address: string | null;
+    user_agent: string | null;
+    created_at: string;
 }
 
 export interface PaginatedData<T> {

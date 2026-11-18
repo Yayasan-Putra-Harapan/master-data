@@ -34,6 +34,7 @@ import {
     ExternalLink,
     KeyRound,
     UserCog,
+    History,
 } from 'lucide-react';
 
 let lastHandledSuccess: string | null = null;
@@ -152,6 +153,12 @@ export default function AuthenticatedLayout({
                   },
               ]
             : []),
+        {
+            name: 'Log Aktivitas Data',
+            href: route('activity-logs.index'),
+            icon: History,
+            current: route().current('activity-logs.*'),
+        },
     ];
 
     return (

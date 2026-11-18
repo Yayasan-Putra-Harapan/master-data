@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Karyawan;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 class KaryawanService
 {
@@ -38,17 +40,49 @@ class KaryawanService
 
     public function create(array $data): Karyawan
     {
-        return Karyawan::create($data);
+        if (isset($data['foto']) && $data['foto'] instanceof UploadedFile) {
+            $data['foto'] = $data['foto']->store('karyawan', 'public');
+        }
+
+        $karyawan = Karyawan::create($data);
+
+        ActivityLogger::log('create', "Menambahkan pegawai/guru: {$karyawan->nama} (NIK: {$karyawan->nik})", $karyawan, [
+            'role' => $karyawan->role,
+            'unit_id' => $karyawan->unit_id,
+        ]);
+
+        return $karyawan;
     }
 
     public function update(Karyawan $karyawan, array $data): Karyawan
     {
+        if (isset($data['foto']) && $data['foto'] instanceof UploadedFile) {
+            if ($karyawan->foto && Storage::disk('public')->exists($karyawan->foto)) {
+                Storage::disk('public')->delete($karyawan->foto);
+            }
+            $data['foto'] = $data['foto']->store('karyawan', 'public');
+        } elseif (array_key_exists('foto', $data) && is_null($data['foto'])) {
+            if ($karyawan->foto && Storage::disk('public')->exists($karyawan->foto)) {
+                Storage::disk('public')->delete($karyawan->foto);
+            }
+            $data['foto'] = null;
+        }
+
         $karyawan->update($data);
+
+        ActivityLogger::log('update', "Memperbarui data pegawai/guru: {$karyawan->nama} (NIK: {$karyawan->nik})", $karyawan);
+
         return $karyawan;
     }
 
     public function delete(Karyawan $karyawan): bool
     {
+        if ($karyawan->foto && Storage::disk('public')->exists($karyawan->foto)) {
+            Storage::disk('public')->delete($karyawan->foto);
+        }
+
+        ActivityLogger::log('delete', "Menghapus data pegawai/guru: {$karyawan->nama} (NIK: {$karyawan->nik})", $karyawan);
+
         return $karyawan->delete();
     }
 }
