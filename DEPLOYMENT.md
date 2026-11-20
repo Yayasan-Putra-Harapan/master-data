@@ -340,7 +340,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Runtime Production
-FROM php:8.3-fpm-alpine
+FROM php:8.4-fpm-alpine
 
 RUN apk add --no-cache \
     nginx \
@@ -441,25 +441,21 @@ jobs:
 ```
 
 Setiap kali developer melakukan `git push` ke branch `main`, GitHub Actions akan mengompilasi Vite + PHP dependencies di cloud GitHub dan mem-publish image ke:
-`ghcr.io/USERNAME_OR_ORG/app-master-data:latest`
+`ghcr.io/yayasan-putra-harapan/master-data:latest`
 
 ---
 
-## 8. Langkah 6: Login GHCR & Setup Container Aplikasi di Server Host
+## 8. Langkah 6: Setup Container Aplikasi di Server Host (Tanpa Login Token Karena Public)
 
-### 1. Buat Token GitHub (Personal Access Token - Classic)
-* Buka Akun GitHub -> **Settings** -> **Developer Settings** -> **Personal Access Tokens (classic)**.
-* Buat token baru, beri nama `Server-Linux-Mint-Deploy`.
-* Centang hak akses: `read:packages`.
-* Copy token tersebut.
+Karena visibilitas package sudah **Public**, langkah membuat GitHub PAT dan `docker login ghcr.io` **TIDAK DIPERLUKAN (DILEWATI)**.
 
-### 2. Login Docker ke GHCR dari Terminal Server
-```bash
-echo "TOKEN_GITHUB_ANDA" | docker login ghcr.io -u "USERNAME_GITHUB" --password-stdin
-```
+### 1. Pastikan Image Sudah Ter-build di GitHub
+* Push berkas `Dockerfile`, `docker/`, dan `.github/workflows/deploy.yml` ke branch `main`.
+* Buka tab **Actions** di repositori GitHub, tunggu build selesai hingga status centang hijau.
+* Verifikasi image muncul di menu **Packages** repository Anda (`ghcr.io/yayasan-putra-harapan/master-data:latest`).
 
-### 3. Setup Berkas Aplikasi di Server (`/opt/apps/app-master-data`)
-Masuk ke direktori:
+### 2. Setup Berkas Aplikasi di Server (`/opt/apps/app-master-data`)
+Masuk ke direktori server:
 
 ```bash
 cd /opt/apps/app-master-data
@@ -479,11 +475,11 @@ LOG_CHANNEL=stack
 LOG_LEVEL=error
 
 DB_CONNECTION=mysql
-DB_HOST=shared-mysql
+DB_HOST=shared_mysql
 DB_PORT=3306
 DB_DATABASE=mdm_db
 DB_USERNAME=mdm_user
-DB_PASSWORD=PASSWORD_DB_MDM
+DB_PASSWORD=lab123
 
 SESSION_DRIVER=database
 QUEUE_CONNECTION=database
@@ -502,7 +498,7 @@ Isi berkas:
 ```yaml
 services:
   app-mdm:
-    image: ghcr.io/USERNAME_OR_ORG/app-master-data:latest
+    image: ghcr.io/yayasan-putra-harapan/master-data:latest
     container_name: app_master_data
     restart: unless-stopped
     env_file:
@@ -526,7 +522,7 @@ networks:
     external: true
 ```
 
-### 4. Jalankan Aplikasi Pertama Kali
+### 3. Jalankan Aplikasi Pertama Kali
 ```bash
 docker compose pull
 docker compose up -d
