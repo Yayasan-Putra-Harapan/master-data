@@ -496,30 +496,7 @@ nano docker-compose.yml
 Isi berkas:
 
 ```yaml
-services:
-  app-mdm:
-    image: ghcr.io/yayasan-putra-harapan/master-data:latest
-    container_name: app_master_data
-    restart: unless-stopped
-    env_file:
-      - .env
-    volumes:
-      - mdm_storage_data:/var/www/html/storage/app/public
-    networks:
-      - web-gateway
-      - db-network
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
 
-volumes:
-  mdm_storage_data:
-    name: mdm_storage_data
-
-networks:
-  web-gateway:
-    external: true
-  db-network:
-    external: true
 ```
 
 ### 3. Jalankan Aplikasi Pertama Kali
@@ -532,7 +509,7 @@ docker exec -it app_master_data php artisan key:generate --show
 # Salin key tersebut ke file .env (APP_KEY=base64:xxx)
 
 # Jalankan seeder master data pertama kali
-docker exec -it app_master_data php artisan db:seed --class=MasterDataSeeder --force
+docker exec -it app_master_data php artisan db:seed --force
 
 # Restart container
 docker compose restart
