@@ -25,13 +25,18 @@ class UserRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:100'],
+            'username' => ['nullable', 'string', 'max:50', 'alpha_dash', Rule::unique('users', 'username')->ignore($userId)],
             'email' => ['required', 'string', 'email', 'max:100', Rule::unique('users', 'email')->ignore($userId)],
-            'role' => ['required', Rule::in(['superadmin', 'operator'])],
+            'role' => ['required', 'string', 'max:50'],
             'unit_id' => [
                 'nullable',
                 Rule::requiredIf($this->input('role') === 'operator'),
                 'exists:units,id',
             ],
+            'is_aktif' => ['nullable', 'boolean'],
+            'karyawan_id' => ['nullable', 'exists:karyawan,id'],
+            'siswa_id' => ['nullable', 'exists:siswa,id'],
+            'orang_tua_id' => ['nullable', 'exists:orang_tua,id'],
             'password' => $passwordRules,
         ];
     }

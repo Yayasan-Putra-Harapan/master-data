@@ -11,13 +11,14 @@ class UserService
 {
     public function getPaginated(array $filters = [], int $perPage = 10): LengthAwarePaginator
     {
-        $query = User::query()->with('unit');
+        $query = User::query()->with(['unit', 'karyawan', 'siswa', 'orangTua']);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('username', 'like', "%{$search}%");
             });
         }
 
@@ -29,6 +30,10 @@ class UserService
             $query->where('unit_id', $filters['unit_id']);
         }
 
+        if (isset($filters['is_aktif']) && $filters['is_aktif'] !== '') {
+            $query->where('is_aktif', filter_var($filters['is_aktif'], FILTER_VALIDATE_BOOLEAN));
+        }
+
         return $query->orderBy('id', 'asc')->paginate($perPage)->withQueryString();
     }
 
@@ -36,9 +41,14 @@ class UserService
     {
         $attributes = [
             'name' => $data['name'],
+            'username' => $data['username'] ?? null,
             'email' => $data['email'],
             'role' => $data['role'],
-            'unit_id' => $data['role'] === 'operator' ? $data['unit_id'] : null,
+            'unit_id' => $data['unit_id'] ?? null,
+            'is_aktif' => isset($data['is_aktif']) ? (bool) $data['is_aktif'] : true,
+            'karyawan_id' => $data['karyawan_id'] ?? null,
+            'siswa_id' => $data['siswa_id'] ?? null,
+            'orang_tua_id' => $data['orang_tua_id'] ?? null,
             'password' => Hash::make($data['password']),
             'email_verified_at' => now(),
         ];
@@ -59,8 +69,28 @@ class UserService
             'name' => $data['name'],
             'email' => $data['email'],
             'role' => $data['role'],
-            'unit_id' => $data['role'] === 'operator' ? $data['unit_id'] : null,
+            'unit_id' => $data['unit_id'] ?? null,
         ];
+
+        if (array_key_exists('username', $data)) {
+            $attributes['username'] = $data['username'];
+        }
+
+        if (array_key_exists('is_aktif', $data)) {
+            $attributes['is_aktif'] = (bool) $data['is_aktif'];
+        }
+
+        if (array_key_exists('karyawan_id', $data)) {
+            $attributes['karyawan_id'] = $data['karyawan_id'];
+        }
+
+        if (array_key_exists('siswa_id', $data)) {
+            $attributes['siswa_id'] = $data['siswa_id'];
+        }
+
+        if (array_key_exists('orang_tua_id', $data)) {
+            $attributes['orang_tua_id'] = $data['orang_tua_id'];
+        }
 
         if (!empty($data['password'])) {
             $attributes['password'] = Hash::make($data['password']);

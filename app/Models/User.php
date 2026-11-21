@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\NewAccessToken;
 
-#[Fillable(['name', 'email', 'password', 'role', 'unit_id'])]
+#[Fillable(['name', 'username', 'email', 'password', 'role', 'unit_id', 'is_aktif', 'karyawan_id', 'siswa_id', 'orang_tua_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -25,6 +25,21 @@ class User extends Authenticatable
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class, 'unit_id');
+    }
+
+    public function karyawan(): BelongsTo
+    {
+        return $this->belongsTo(Karyawan::class, 'karyawan_id');
+    }
+
+    public function siswa(): BelongsTo
+    {
+        return $this->belongsTo(Siswa::class, 'siswa_id');
+    }
+
+    public function orangTua(): BelongsTo
+    {
+        return $this->belongsTo(OrangTua::class, 'orang_tua_id');
     }
 
     public function isSuperadmin(): bool
@@ -83,6 +98,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_aktif' => 'boolean',
         ];
     }
 }

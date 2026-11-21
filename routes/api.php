@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AnggotaKelasApiController;
+use App\Http\Controllers\Api\V1\AuthApiController;
 use App\Http\Controllers\Api\V1\BangunanApiController;
 use App\Http\Controllers\Api\V1\DataQualityApiController;
 use App\Http\Controllers\Api\V1\KaryawanApiController;
@@ -11,10 +12,25 @@ use App\Http\Controllers\Api\V1\RuangApiController;
 use App\Http\Controllers\Api\V1\SiswaApiController;
 use App\Http\Controllers\Api\V1\TahunAjaranApiController;
 use App\Http\Controllers\Api\V1\UnitApiController;
+use App\Http\Controllers\Api\V1\UserApiController;
 use App\Http\Controllers\Api\V1\VendorApiController;
 use Illuminate\Support\Facades\Route;
 
+// Public Auth API for External Satellite Systems
+Route::prefix('v1/auth')->name('api.v1.auth.')->group(function () {
+    Route::post('login', [AuthApiController::class, 'login'])->name('login');
+});
+
 Route::prefix('v1')->name('api.v1.')->middleware('auth:sanctum')->group(function () {
+    // Authenticated Auth Endpoints
+    Route::prefix('auth')->name('auth.')->group(function () {
+        Route::get('me', [AuthApiController::class, 'me'])->name('me');
+        Route::post('logout', [AuthApiController::class, 'logout'])->name('logout');
+    });
+
+    // User Master Data
+    Route::apiResource('users', UserApiController::class)->only(['index', 'show']);
+
     // Increment 1
     Route::apiResource('units', UnitApiController::class);
     Route::apiResource('orang-tua', OrangTuaApiController::class);
