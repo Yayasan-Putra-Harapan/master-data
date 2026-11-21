@@ -6,6 +6,7 @@ import Pagination from '@/Components/Pagination';
 import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
+import { Badge } from '@/Components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import {
     Table,
@@ -40,7 +41,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/Components/ui/select';
-import { Plus, Search, Edit2, Trash2, UserCheck, Phone, MapPin, Download } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, UserCheck, Phone, MapPin, Download, Lock, Eye, Users, Mail } from 'lucide-react';
 
 interface Props {
     orangTua: PaginatedData<OrangTua>;
@@ -55,6 +56,7 @@ export default function OrangTuaIndex({ orangTua, filters }: Props) {
     const [perPage, setPerPage] = useState(filters.per_page || '10');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingOrtu, setEditingOrtu] = useState<OrangTua | null>(null);
+    const [viewingOrtu, setViewingOrtu] = useState<OrangTua | null>(null);
     const [deletingOrtu, setDeletingOrtu] = useState<OrangTua | null>(null);
 
     const isInitialSearch = useRef(true);
@@ -107,6 +109,8 @@ export default function OrangTuaIndex({ orangTua, filters }: Props) {
         telepon: '',
         email: '',
         alamat: '',
+        username: '',
+        password: '',
     });
 
     const handleSearch = (e: React.FormEvent) => {
@@ -144,6 +148,8 @@ export default function OrangTuaIndex({ orangTua, filters }: Props) {
             telepon: item.telepon || '',
             email: item.email || '',
             alamat: item.alamat || '',
+            username: '',
+            password: '',
         });
         setIsFormOpen(true);
     };
@@ -308,6 +314,15 @@ export default function OrangTuaIndex({ orangTua, filters }: Props) {
                                                             variant="ghost"
                                                             size="icon"
                                                             className="h-8 w-8 text-neutral-600 hover:text-neutral-900"
+                                                            title="Lihat Detail"
+                                                            onClick={() => setViewingOrtu(item)}
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-neutral-600 hover:text-neutral-900"
                                                             onClick={() => openEditModal(item)}
                                                         >
                                                             <Edit2 className="h-4 w-4" />
@@ -339,6 +354,191 @@ export default function OrangTuaIndex({ orangTua, filters }: Props) {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Detail Dialog */}
+            <Dialog open={!!viewingOrtu} onOpenChange={() => setViewingOrtu(null)}>
+                <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <UserCheck className="h-4 w-4 text-primary" />
+                            Detail Orang Tua / Wali
+                        </DialogTitle>
+                        <DialogDescription>
+                            {viewingOrtu?.nama_ayah ||
+                                viewingOrtu?.nama_ibu ||
+                                viewingOrtu?.nama_wali ||
+                                'Data keluarga'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {viewingOrtu && (
+                        <div className="space-y-4 py-2 text-sm">
+                            <div className="flex items-center justify-between rounded-lg bg-muted p-3">
+                                <div>
+                                    <div className="text-xs text-muted-foreground">Nomor Kartu Keluarga</div>
+                                    <div className="mt-0.5 font-mono text-sm font-semibold text-foreground">
+                                        {viewingOrtu.no_kk || '-'}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-xs text-muted-foreground">Siswa Terhubung</div>
+                                    <Badge variant="secondary" className="mt-0.5">
+                                        {viewingOrtu.siswa?.length ?? viewingOrtu.siswa_count ?? 0} siswa
+                                    </Badge>
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border p-3 space-y-2.5">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <Phone className="h-3.5 w-3.5" /> Kontak &amp; Alamat
+                                </div>
+                                <div className="space-y-1.5 text-xs">
+                                    <div className="flex items-center gap-2 text-foreground">
+                                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                                        <span>{viewingOrtu.telepon || '-'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-foreground">
+                                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                                        <span className="break-all">{viewingOrtu.email || '-'}</span>
+                                    </div>
+                                    <div className="flex items-start gap-2 text-foreground pt-1">
+                                        <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" />
+                                        <span>{viewingOrtu.alamat || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border p-3 space-y-2.5">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <Lock className="h-3.5 w-3.5" /> Akun Login
+                                </div>
+                                {viewingOrtu.user ? (
+                                    <div className="space-y-1.5 text-xs">
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">Username:</span>
+                                            <span className="font-mono font-medium text-foreground break-all text-right">
+                                                {viewingOrtu.user.username || '-'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">Email:</span>
+                                            <span className="font-medium text-foreground break-all text-right">
+                                                {viewingOrtu.user.email}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">Status Akun:</span>
+                                            <Badge variant={viewingOrtu.user.is_aktif ? 'default' : 'secondary'}>
+                                                {viewingOrtu.user.is_aktif ? 'Aktif' : 'Nonaktif'}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-xs text-muted-foreground italic">
+                                        Belum memiliki akun login.
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="rounded-lg border p-3 space-y-3">
+                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    Data Keluarga
+                                </div>
+                                <div className="space-y-1.5 text-xs">
+                                    <div className="flex justify-between gap-3">
+                                        <span className="text-muted-foreground">Ayah:</span>
+                                        <span className="font-medium text-foreground text-right">
+                                            {viewingOrtu.nama_ayah || '-'}
+                                        </span>
+                                    </div>
+                                    {viewingOrtu.nik_ayah && (
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">NIK Ayah:</span>
+                                            <span className="font-mono text-foreground">{viewingOrtu.nik_ayah}</span>
+                                        </div>
+                                    )}
+                                    {viewingOrtu.pekerjaan_ayah && (
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">Pekerjaan Ayah:</span>
+                                            <span className="text-foreground text-right">{viewingOrtu.pekerjaan_ayah}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between gap-3 border-t pt-1.5">
+                                        <span className="text-muted-foreground">Ibu:</span>
+                                        <span className="font-medium text-foreground text-right">
+                                            {viewingOrtu.nama_ibu || '-'}
+                                        </span>
+                                    </div>
+                                    {viewingOrtu.nik_ibu && (
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">NIK Ibu:</span>
+                                            <span className="font-mono text-foreground">{viewingOrtu.nik_ibu}</span>
+                                        </div>
+                                    )}
+                                    {viewingOrtu.pekerjaan_ibu && (
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">Pekerjaan Ibu:</span>
+                                            <span className="text-foreground text-right">{viewingOrtu.pekerjaan_ibu}</span>
+                                        </div>
+                                    )}
+                                    {(viewingOrtu.nama_wali || viewingOrtu.nik_wali) && (
+                                        <>
+                                            <div className="flex justify-between gap-3 border-t pt-1.5">
+                                                <span className="text-muted-foreground">Wali:</span>
+                                                <span className="font-medium text-foreground text-right">
+                                                    {viewingOrtu.nama_wali || '-'}
+                                                </span>
+                                            </div>
+                                            {viewingOrtu.hubungan_wali && (
+                                                <div className="flex justify-between gap-3">
+                                                    <span className="text-muted-foreground">Hubungan:</span>
+                                                    <span className="text-foreground">{viewingOrtu.hubungan_wali}</span>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border p-3 space-y-2.5">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <Users className="h-3.5 w-3.5" /> Daftar Siswa
+                                </div>
+                                {viewingOrtu.siswa && viewingOrtu.siswa.length > 0 ? (
+                                    <div className="divide-y">
+                                        {viewingOrtu.siswa.map((s) => (
+                                            <div key={s.id} className="flex items-start justify-between gap-3 py-2 first:pt-0 last:pb-0">
+                                                <div className="min-w-0">
+                                                    <div className="truncate text-xs font-medium text-foreground">
+                                                        {s.nama_lengkap}
+                                                    </div>
+                                                    <div className="text-[11px] text-muted-foreground">
+                                                        NISN: {s.nisn}
+                                                        {s.unit ? ` • ${s.unit.nama_unit} (${s.unit.jenjang})` : ''}
+                                                    </div>
+                                                </div>
+                                                <Badge variant="secondary" className="shrink-0 capitalize">
+                                                    {s.status}
+                                                </Badge>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-xs text-muted-foreground italic">
+                                        Belum ada siswa yang terhubung dengan data ini.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setViewingOrtu(null)}>
+                            Tutup
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Form Dialog */}
             <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
@@ -479,7 +679,7 @@ export default function OrangTuaIndex({ orangTua, filters }: Props) {
                                 )}
                             </div>
                             <div className="space-y-1">
-                                <Label htmlFor="email">Email</Label>
+                                <Label htmlFor="email">Alamat Email Login *</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -487,6 +687,9 @@ export default function OrangTuaIndex({ orangTua, filters }: Props) {
                                     value={data.email}
                                     onChange={(e) => setData('email', e.target.value)}
                                 />
+                                {errors.email && (
+                                    <p className="text-xs text-red-500">{errors.email}</p>
+                                )}
                             </div>
                         </div>
 
@@ -501,6 +704,49 @@ export default function OrangTuaIndex({ orangTua, filters }: Props) {
                             {errors.alamat && (
                                 <p className="text-xs text-red-500">{errors.alamat}</p>
                             )}
+                        </div>
+
+                        {/* Akun Login Orang Tua */}
+                        <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-3 space-y-3">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                                <Lock className="h-3.5 w-3.5" />
+                                <span>Kredensial Akun Login Orang Tua / Wali</span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Email login wajib diisi (gunakan field <strong>Alamat Email Login</strong> di atas).
+                                {editingOrtu
+                                    ? ' Kosongkan kata sandi jika tidak ingin mengubahnya.'
+                                    : ' Kata sandi wajib diisi untuk akun orang tua baru.'}
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <Label htmlFor="ortu-username" className="text-xs">
+                                        Username Khusus (Opsional)
+                                    </Label>
+                                    <Input
+                                        id="ortu-username"
+                                        placeholder="Kosongkan = NIK / No. KK"
+                                        value={data.username}
+                                        onChange={(e) => setData('username', e.target.value)}
+                                        className="text-xs h-8"
+                                    />
+                                    {errors.username && <p className="text-xs text-destructive">{errors.username}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="ortu-password" className="text-xs">
+                                        {editingOrtu ? 'Kata Sandi Baru (Opsional)' : 'Kata Sandi Akun *'}
+                                    </Label>
+                                    <Input
+                                        id="ortu-password"
+                                        type="password"
+                                        placeholder={editingOrtu ? 'Kosongkan jika tidak diubah' : 'Minimal 6 karakter'}
+                                        value={data.password}
+                                        onChange={(e) => setData('password', e.target.value)}
+                                        className="text-xs h-8"
+                                    />
+                                    {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+                                </div>
+                            </div>
                         </div>
 
                         <DialogFooter className="pt-2">

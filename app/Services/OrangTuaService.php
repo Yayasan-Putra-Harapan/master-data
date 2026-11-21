@@ -9,7 +9,13 @@ class OrangTuaService
 {
     public function getPaginated(array $filters = [], int $perPage = 10): LengthAwarePaginator
     {
-        $query = OrangTua::query()->withCount('siswa');
+        $query = OrangTua::query()
+            ->withCount('siswa')
+            ->with([
+                'user:id,orang_tua_id,username,email,is_aktif',
+                'siswa' => fn ($q) => $q->select('id', 'nisn', 'nis', 'nama_lengkap', 'unit_id', 'status', 'orang_tua_id')
+                    ->with('unit:id,nama_unit,jenjang'),
+            ]);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -27,12 +33,27 @@ class OrangTuaService
 
     public function create(array $data): OrangTua
     {
-        return OrangTua::create($data);
+        $customUsername = $data['username'] ?? null;
+        $customPassword = $data['password'] ?? null;
+        unset($data['username'], $data['password']);
+
+        $orangTua = OrangTua::create($data);
+
+        app(UserProvisioningService::class)->syncOrangTuaUser($orangTua, $customUsername, $customPassword);
+
+        return $orangTua;
     }
 
     public function update(OrangTua $orangTua, array $data): OrangTua
     {
+        $customUsername = $data['username'] ?? null;
+        $customPassword = $data['password'] ?? null;
+        unset($data['username'], $data['password']);
+
         $orangTua->update($data);
+
+        app(UserProvisioningService::class)->syncOrangTuaUser($orangTua, $customUsername, $customPassword);
+
         return $orangTua;
     }
 

@@ -92,10 +92,12 @@ export default function UsersIndex({ users, units, filters }: Props) {
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } = useForm({
         name: '',
+        username: '',
         email: '',
         password: '',
-        role: 'operator' as 'superadmin' | 'operator',
+        role: 'operator',
         unit_id: units[0]?.id?.toString() || '',
+        is_aktif: true,
     });
 
     const applyFilter = (params: Record<string, string | undefined>) => {
@@ -117,10 +119,12 @@ export default function UsersIndex({ users, units, filters }: Props) {
         clearErrors();
         setData({
             name: '',
+            username: '',
             email: '',
             password: '',
             role: 'operator',
             unit_id: units[0]?.id?.toString() || '',
+            is_aktif: true,
         });
         setIsFormOpen(true);
     };
@@ -130,10 +134,12 @@ export default function UsersIndex({ users, units, filters }: Props) {
         clearErrors();
         setData({
             name: user.name,
+            username: user.username || '',
             email: user.email,
             password: '',
             role: user.role,
             unit_id: user.unit_id ? user.unit_id.toString() : (units[0]?.id?.toString() || ''),
+            is_aktif: user.is_aktif ?? true,
         });
         setIsFormOpen(true);
     };
@@ -252,6 +258,13 @@ export default function UsersIndex({ users, units, filters }: Props) {
                                         <SelectItem value="all">Semua Peran</SelectItem>
                                         <SelectItem value="superadmin">Superadmin</SelectItem>
                                         <SelectItem value="operator">Operator Unit</SelectItem>
+                                        <SelectItem value="guru">Guru</SelectItem>
+                                        <SelectItem value="staf">Staf</SelectItem>
+                                        <SelectItem value="administrasi">Staf Administrasi</SelectItem>
+                                        <SelectItem value="kepala_sekolah">Kepala Sekolah</SelectItem>
+                                        <SelectItem value="keuangan">Keuangan</SelectItem>
+                                        <SelectItem value="siswa">Siswa</SelectItem>
+                                        <SelectItem value="orang_tua">Orang Tua</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -285,16 +298,17 @@ export default function UsersIndex({ users, units, filters }: Props) {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Nama Pengguna</TableHead>
-                                        <TableHead>Alamat Email</TableHead>
+                                        <TableHead>Email & Username</TableHead>
                                         <TableHead>Peran / Role</TableHead>
                                         <TableHead>Satuan Unit Wewenang</TableHead>
+                                        <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Aksi</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {users.data.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                            <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                                 Tidak ada akun pengguna yang ditemukan.
                                             </TableCell>
                                         </TableRow>
@@ -313,17 +327,28 @@ export default function UsersIndex({ users, units, filters }: Props) {
                                                             )}
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell className="text-xs text-muted-foreground font-mono">
-                                                        {item.email}
+                                                    <TableCell>
+                                                        <div className="text-xs text-muted-foreground font-mono">
+                                                            {item.email}
+                                                        </div>
+                                                        {item.username && (
+                                                            <div className="text-[11px] text-muted-foreground/80 font-mono">
+                                                                @{item.username}
+                                                            </div>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell>
                                                         {item.role === 'superadmin' ? (
                                                             <Badge className="bg-primary text-primary-foreground gap-1">
                                                                 <Shield className="h-3 w-3" /> Superadmin
                                                             </Badge>
-                                                        ) : (
+                                                        ) : item.role === 'operator' ? (
                                                             <Badge variant="secondary" className="gap-1">
                                                                 <UserCheck className="h-3 w-3" /> Operator
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="outline" className="capitalize">
+                                                                {item.role}
                                                             </Badge>
                                                         )}
                                                     </TableCell>
@@ -341,6 +366,17 @@ export default function UsersIndex({ users, units, filters }: Props) {
                                                             <span className="text-xs text-destructive italic">
                                                                 Belum Ditugaskan
                                                             </span>
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {item.is_aktif ?? true ? (
+                                                            <Badge variant="outline" className="text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 text-[11px]">
+                                                                Aktif
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="destructive" className="text-[11px]">
+                                                                Non-Aktif
+                                                            </Badge>
                                                         )}
                                                     </TableCell>
                                                     <TableCell className="text-right">
@@ -410,16 +446,29 @@ export default function UsersIndex({ users, units, filters }: Props) {
                             {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                         </div>
 
-                        <div className="space-y-1.5">
-                            <Label htmlFor="user-email">Alamat Email *</Label>
-                            <Input
-                                id="user-email"
-                                type="email"
-                                placeholder="nama@yayasan.ac.id"
-                                value={data.email}
-                                onChange={(e) => setData('email', e.target.value)}
-                            />
-                            {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <Label htmlFor="user-email">Alamat Email *</Label>
+                                <Input
+                                    id="user-email"
+                                    type="email"
+                                    placeholder="nama@yayasan.ac.id"
+                                    value={data.email}
+                                    onChange={(e) => setData('email', e.target.value)}
+                                />
+                                {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="user-username">Username / NIP (Opsional)</Label>
+                                <Input
+                                    id="user-username"
+                                    placeholder="budi_guru"
+                                    value={data.username}
+                                    onChange={(e) => setData('username', e.target.value)}
+                                />
+                                {errors.username && <p className="text-xs text-destructive">{errors.username}</p>}
+                            </div>
                         </div>
 
                         <div className="space-y-1.5">
@@ -446,7 +495,7 @@ export default function UsersIndex({ users, units, filters }: Props) {
                                 <Label htmlFor="user-role">Peran / Hak Akses *</Label>
                                 <Select
                                     value={data.role}
-                                    onValueChange={(val: 'superadmin' | 'operator') => setData('role', val)}
+                                    onValueChange={(val) => setData('role', val)}
                                 >
                                     <SelectTrigger id="user-role">
                                         <SelectValue />
@@ -454,33 +503,56 @@ export default function UsersIndex({ users, units, filters }: Props) {
                                     <SelectContent>
                                         <SelectItem value="operator">Operator Unit</SelectItem>
                                         <SelectItem value="superadmin">Superadmin Yayasan</SelectItem>
+                                        <SelectItem value="guru">Guru</SelectItem>
+                                        <SelectItem value="staf">Staf</SelectItem>
+                                        <SelectItem value="administrasi">Staf Administrasi</SelectItem>
+                                        <SelectItem value="kepala_sekolah">Kepala Sekolah</SelectItem>
+                                        <SelectItem value="keuangan">Keuangan</SelectItem>
+                                        <SelectItem value="siswa">Siswa</SelectItem>
+                                        <SelectItem value="orang_tua">Orang Tua</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 {errors.role && <p className="text-xs text-destructive">{errors.role}</p>}
                             </div>
 
-                            {data.role === 'operator' && (
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="user-unit">Satuan Unit *</Label>
-                                    <Select
-                                        value={data.unit_id}
-                                        onValueChange={(val) => setData('unit_id', val)}
-                                    >
-                                        <SelectTrigger id="user-unit">
-                                            <SelectValue placeholder="Pilih Unit" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {units.map((u) => (
-                                                <SelectItem key={u.id} value={u.id.toString()}>
-                                                    {u.kode_unit} - {u.nama_unit}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.unit_id && <p className="text-xs text-destructive">{errors.unit_id}</p>}
-                                </div>
-                            )}
+                            <div className="space-y-1.5">
+                                <Label htmlFor="user-status">Status Akun</Label>
+                                <Select
+                                    value={data.is_aktif ? '1' : '0'}
+                                    onValueChange={(val) => setData('is_aktif', val === '1')}
+                                >
+                                    <SelectTrigger id="user-status">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="1">Aktif (Dapat Login)</SelectItem>
+                                        <SelectItem value="0">Non-Aktif (Blokir Akses)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
+
+                        {data.role !== 'superadmin' && (
+                            <div className="space-y-1.5">
+                                <Label htmlFor="user-unit">Satuan Unit Penugasan</Label>
+                                <Select
+                                    value={data.unit_id}
+                                    onValueChange={(val) => setData('unit_id', val)}
+                                >
+                                    <SelectTrigger id="user-unit">
+                                        <SelectValue placeholder="Pilih Unit" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {units.map((u) => (
+                                            <SelectItem key={u.id} value={u.id.toString()}>
+                                                {u.kode_unit} - {u.nama_unit}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.unit_id && <p className="text-xs text-destructive">{errors.unit_id}</p>}
+                            </div>
+                        )}
 
                         <DialogFooter className="pt-2">
                             <Button

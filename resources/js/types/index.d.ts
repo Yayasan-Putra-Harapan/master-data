@@ -1,10 +1,15 @@
 export interface User {
     id: number;
     name: string;
+    username?: string | null;
     email: string;
-    role: 'superadmin' | 'operator';
+    role: string;
     unit_id?: number | null;
     unit?: Unit | null;
+    is_aktif?: boolean;
+    karyawan_id?: number | null;
+    siswa_id?: number | null;
+    orang_tua_id?: number | null;
     email_verified_at?: string;
 }
 
@@ -20,6 +25,13 @@ export interface Unit {
     is_aktif: boolean;
     siswa_count?: number;
     karyawan_count?: number;
+}
+
+export interface UserAccount {
+    id: number;
+    username: string | null;
+    email: string;
+    is_aktif: boolean;
 }
 
 export interface OrangTua {
@@ -40,6 +52,8 @@ export interface OrangTua {
     email?: string;
     alamat: string;
     siswa_count?: number;
+    siswa?: Siswa[];
+    user?: UserAccount | null;
 }
 
 export interface Karyawan {
@@ -63,6 +77,7 @@ export interface Karyawan {
     is_aktif: boolean;
     foto?: string | null;
     foto_url?: string | null;
+    user?: UserAccount | null;
 }
 
 export interface Siswa {
@@ -85,6 +100,7 @@ export interface Siswa {
     status: 'aktif' | 'lulus' | 'mutasi' | 'keluar';
     foto?: string | null;
     foto_url?: string | null;
+    user?: UserAccount | null;
 }
 
 export interface TahunAjaran {

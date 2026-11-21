@@ -55,6 +55,10 @@ class SiswaRequest extends FormRequest
             'alamat' => ['required', 'string', 'max:500'],
             'angkatan' => ['required', 'integer', 'between:2010,2035'],
             'status' => ['required', \Illuminate\Validation\Rule::in(['aktif', 'lulus', 'mutasi', 'keluar'])],
+            'username' => ['nullable', 'string', 'max:50', 'alpha_dash', \Illuminate\Validation\Rule::unique('users', 'username')->ignore(
+                $siswaId ? \App\Models\User::where('siswa_id', $siswaId)->value('id') : null
+            )],
+            'password' => ['nullable', 'string', 'min:6'],
             'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'hapus_foto' => ['nullable', 'boolean'],
         ];
@@ -109,6 +113,8 @@ class SiswaRequest extends FormRequest
             'unit_id.exists' => 'Unit sekolah yang dipilih tidak ditemukan.',
             'orang_tua_id.exists' => 'Data orang tua/wali tidak valid.',
             'alamat.required' => 'Alamat tinggal siswa wajib diisi.',
+            'username.unique' => 'Username ini sudah dipakai akun pengguna lain.',
+            'password.min' => 'Kata sandi minimal 6 karakter.',
             'foto.image' => 'Berkas pas foto harus berupa gambar.',
             'foto.mimes' => 'Format pas foto harus berupa jpeg, jpg, png, atau webp.',
             'foto.max' => 'Ukuran pas foto maksimal 2MB.',

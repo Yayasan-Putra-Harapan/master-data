@@ -696,6 +696,7 @@ test('authenticated user can upload employee photo and view foto_url', function 
         'telepon' => '081234567890',
         'email' => 'guru.foto@yayasan.ac.id',
         'tanggal_masuk' => '2020-01-01',
+        'password' => 'password123',
         'foto' => $photo,
     ]);
 
@@ -857,6 +858,7 @@ test('can create and update karyawan with photo upload and delete photo', functi
         'email' => 'guru.foto@sekolah.sch.id',
         'tanggal_masuk' => '2023-01-01',
         'is_aktif' => 1,
+        'password' => 'password123',
         'foto' => $foto1,
     ]);
 

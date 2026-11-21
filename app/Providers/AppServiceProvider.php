@@ -2,7 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\Karyawan;
+use App\Models\OrangTua;
+use App\Models\Siswa;
 use App\Models\User;
+use App\Observers\KaryawanObserver;
+use App\Observers\OrangTuaObserver;
+use App\Observers\SiswaObserver;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Vite;
@@ -32,5 +38,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewApiDocs', function (?User $user) {
             return $user !== null;
         });
+
+        Siswa::observe(SiswaObserver::class);
+        Karyawan::observe(KaryawanObserver::class);
+        OrangTua::observe(OrangTuaObserver::class);
     }
 }

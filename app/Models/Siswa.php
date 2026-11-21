@@ -69,4 +69,9 @@ class Siswa extends Model
             ->withPivot(['tahun_ajaran_id', 'status', 'tanggal_masuk', 'keterangan'])
             ->withTimestamps();
     }
+
+    public function user(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(User::class, 'siswa_id');
+    }
 }

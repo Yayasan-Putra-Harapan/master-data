@@ -26,13 +26,6 @@ import {
     DialogTitle,
 } from '@/Components/ui/dialog';
 import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-} from '@/Components/ui/sheet';
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -72,6 +65,7 @@ import {
     Calendar,
     Printer,
     Camera,
+    Lock,
 } from 'lucide-react';
 
 interface Props {
@@ -134,6 +128,8 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
         tanggal_masuk: new Date().toISOString().split('T')[0],
         is_aktif: true,
         foto: null as File | null,
+        username: '',
+        password: '',
     });
 
     const importForm = useForm({
@@ -188,6 +184,8 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
             tanggal_masuk: item.tanggal_masuk ? item.tanggal_masuk.substring(0, 10) : '',
             is_aktif: item.is_aktif,
             foto: null,
+            username: '',
+            password: '',
         });
         setIsFormOpen(true);
     };
@@ -524,11 +522,11 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
                 </Card>
             </div>
 
-            {/* Detail Sheet */}
-            <Sheet open={!!viewingKaryawan} onOpenChange={() => setViewingKaryawan(null)}>
-                <SheetContent className="overflow-y-auto sm:max-w-md">
-                    <SheetHeader>
-                        <div className="flex items-center gap-3">
+            {/* Detail Dialog */}
+            <Dialog open={!!viewingKaryawan} onOpenChange={() => setViewingKaryawan(null)}>
+                <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3 text-left">
                             <Avatar className="h-12 w-12 border border-border shrink-0">
                                 {viewingKaryawan?.foto_url && <AvatarImage src={viewingKaryawan.foto_url} alt={viewingKaryawan.nama} />}
                                 <AvatarFallback className="text-sm font-semibold uppercase bg-muted">
@@ -536,13 +534,13 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
                                 </AvatarFallback>
                             </Avatar>
                             <div>
-                                <SheetTitle className="text-base">{viewingKaryawan?.nama}</SheetTitle>
-                                <SheetDescription className="text-xs">
+                                <DialogTitle className="text-base">{viewingKaryawan?.nama}</DialogTitle>
+                                <DialogDescription className="text-xs">
                                     NIK: {viewingKaryawan?.nik} {viewingKaryawan?.nip ? `• NIP: ${viewingKaryawan.nip}` : ''}
-                                </SheetDescription>
+                                </DialogDescription>
                             </div>
                         </div>
-                    </SheetHeader>
+                    </DialogHeader>
 
                     {viewingKaryawan && (
                         <div className="space-y-4 py-4 text-sm">
@@ -643,6 +641,41 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
                                 </div>
                             </div>
 
+                            <div className="rounded-lg border p-3 space-y-2.5">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <Lock className="h-3.5 w-3.5" /> Akun Login Pegawai
+                                </div>
+                                {viewingKaryawan.user ? (
+                                    <div className="space-y-1.5 text-xs">
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">Username:</span>
+                                            <span className="font-mono font-medium text-foreground break-all text-right">
+                                                {viewingKaryawan.user.username || '-'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">Email:</span>
+                                            <span className="font-medium text-foreground break-all text-right">
+                                                {viewingKaryawan.user.email}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">Status Akun:</span>
+                                            <Badge variant={viewingKaryawan.user.is_aktif ? 'default' : 'secondary'}>
+                                                {viewingKaryawan.user.is_aktif ? 'Aktif' : 'Nonaktif'}
+                                            </Badge>
+                                        </div>
+                                        <p className="pt-1 text-[11px] text-muted-foreground leading-relaxed">
+                                            Password dikelola saat tambah/edit data pegawai.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="text-xs text-muted-foreground italic">
+                                        Belum memiliki akun login.
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="pt-2">
                                 <a
                                     href={route('karyawan.cetak', viewingKaryawan.id)}
@@ -657,8 +690,14 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
                             </div>
                         </div>
                     )}
-                </SheetContent>
-            </Sheet>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setViewingKaryawan(null)}>
+                            Tutup
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Import Dialog */}
             <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
@@ -917,15 +956,18 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
 
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
-                                <Label htmlFor="email">Alamat Email *</Label>
+                                <Label htmlFor="email">Alamat Email (Login) *</Label>
                                 <Input
                                     id="email"
                                     type="email"
-                                    placeholder="nama@yayasan.ac.id"
+                                    placeholder="nama@putraharapan.my.id"
                                     value={data.email}
                                     onChange={(e) => setData('email', e.target.value)}
                                 />
                                 {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                                <p className="text-[11px] text-muted-foreground">
+                                    Email ini dipakai sebagai email akun login pegawai (domain @putraharapan.my.id).
+                                </p>
                             </div>
                             <div className="space-y-1">
                                 <Label htmlFor="telepon">Nomor Telepon / WA *</Label>
@@ -970,6 +1012,49 @@ export default function KaryawanIndex({ karyawan, units, filters }: Props) {
                                 value={data.alamat}
                                 onChange={(e) => setData('alamat', e.target.value)}
                             />
+                        </div>
+
+                        {/* Akun Login Pegawai */}
+                        <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-3 space-y-3">
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                                <Lock className="h-3.5 w-3.5" />
+                                <span>Kredensial Akun Login Pegawai</span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Email akun mengikuti field <strong>Alamat Email</strong> di atas.
+                                {editingKaryawan
+                                    ? ' Kosongkan kata sandi jika tidak ingin mengubahnya.'
+                                    : ' Kata sandi wajib diisi untuk akun pegawai baru.'}
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <Label htmlFor="karyawan-username" className="text-xs">
+                                        Username Khusus (Opsional)
+                                    </Label>
+                                    <Input
+                                        id="karyawan-username"
+                                        placeholder="Kosongkan = NIP / NIK"
+                                        value={data.username}
+                                        onChange={(e) => setData('username', e.target.value)}
+                                        className="text-xs h-8"
+                                    />
+                                    {errors.username && <p className="text-xs text-destructive">{errors.username}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="karyawan-password" className="text-xs">
+                                        {editingKaryawan ? 'Kata Sandi Baru (Opsional)' : 'Kata Sandi Akun *'}
+                                    </Label>
+                                    <Input
+                                        id="karyawan-password"
+                                        type="password"
+                                        placeholder={editingKaryawan ? 'Kosongkan jika tidak diubah' : 'Minimal 6 karakter'}
+                                        value={data.password}
+                                        onChange={(e) => setData('password', e.target.value)}
+                                        className="text-xs h-8"
+                                    />
+                                    {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+                                </div>
+                            </div>
                         </div>
 
                         <DialogFooter className="pt-2">

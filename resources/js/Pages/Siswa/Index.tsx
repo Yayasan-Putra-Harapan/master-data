@@ -26,13 +26,6 @@ import {
     DialogTitle,
 } from '@/Components/ui/dialog';
 import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-} from '@/Components/ui/sheet';
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -70,6 +63,7 @@ import {
     School,
     Printer,
     Camera,
+    Lock,
 } from 'lucide-react';
 
 interface Props {
@@ -133,6 +127,8 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
         angkatan: currentYear,
         status: 'aktif' as Siswa['status'],
         foto: null as File | null,
+        username: '',
+        password: '',
     });
 
     const importForm = useForm({
@@ -185,6 +181,8 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
             angkatan: item.angkatan,
             status: item.status,
             foto: null,
+            username: '',
+            password: '',
         });
         setIsFormOpen(true);
     };
@@ -536,11 +534,11 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                 </Card>
             </div>
 
-            {/* Detail Sheet */}
-            <Sheet open={!!viewingSiswa} onOpenChange={() => setViewingSiswa(null)}>
-                <SheetContent className="overflow-y-auto sm:max-w-md">
-                    <SheetHeader>
-                        <div className="flex items-center gap-3">
+            {/* Detail Dialog */}
+            <Dialog open={!!viewingSiswa} onOpenChange={() => setViewingSiswa(null)}>
+                <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3 text-left">
                             <Avatar className="h-12 w-12 border border-border shrink-0">
                                 {viewingSiswa?.foto_url && <AvatarImage src={viewingSiswa.foto_url} alt={viewingSiswa.nama_lengkap} />}
                                 <AvatarFallback className="text-sm font-semibold uppercase bg-muted">
@@ -548,13 +546,13 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                                 </AvatarFallback>
                             </Avatar>
                             <div>
-                                <SheetTitle className="text-base">{viewingSiswa?.nama_lengkap}</SheetTitle>
-                                <SheetDescription className="text-xs">
+                                <DialogTitle className="text-base">{viewingSiswa?.nama_lengkap}</DialogTitle>
+                                <DialogDescription className="text-xs">
                                     NISN: {viewingSiswa?.nisn} {viewingSiswa?.nis ? `• NIS: ${viewingSiswa.nis}` : ''}
-                                </SheetDescription>
+                                </DialogDescription>
                             </div>
                         </div>
-                    </SheetHeader>
+                    </DialogHeader>
 
                     {viewingSiswa && (
                         <div className="space-y-4 py-4 text-sm">
@@ -622,6 +620,41 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
 
                             <div className="rounded-lg border p-3 space-y-2.5">
                                 <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <Lock className="h-3.5 w-3.5" /> Akun Login Siswa
+                                </div>
+                                {viewingSiswa.user ? (
+                                    <div className="space-y-1.5 text-xs">
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">Username:</span>
+                                            <span className="font-mono font-medium text-foreground break-all text-right">
+                                                {viewingSiswa.user.username || '-'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">Email:</span>
+                                            <span className="font-medium text-foreground break-all text-right">
+                                                {viewingSiswa.user.email}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between gap-3">
+                                            <span className="text-muted-foreground">Status Akun:</span>
+                                            <Badge variant={viewingSiswa.user.is_aktif ? 'default' : 'secondary'}>
+                                                {viewingSiswa.user.is_aktif ? 'Aktif' : 'Nonaktif'}
+                                            </Badge>
+                                        </div>
+                                        <p className="pt-1 text-[11px] text-muted-foreground leading-relaxed">
+                                            Password default = tanggal lahir siswa (DDMMYYYY), kecuali sudah diubah.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="text-xs text-muted-foreground italic">
+                                        Belum memiliki akun login.
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="rounded-lg border p-3 space-y-2.5">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                     <UserCheck className="h-3.5 w-3.5" /> Data Orang Tua / Wali
                                 </div>
                                 {viewingSiswa.orang_tua ? (
@@ -660,8 +693,14 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                             </div>
                         </div>
                     )}
-                </SheetContent>
-            </Sheet>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setViewingSiswa(null)}>
+                            Tutup
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* Import Dialog */}
             <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
@@ -959,6 +998,51 @@ export default function SiswaIndex({ siswa, units, orangTuaList, filters }: Prop
                             {errors.alamat && (
                                 <p className="text-xs text-destructive">{errors.alamat}</p>
                             )}
+                        </div>
+
+                        {/* Pengaturan Akun Login Siswa (Opsional) */}
+                        <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-3 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                                    <Lock className="h-3.5 w-3.5" />
+                                    <span>Kredensial Akun Login Siswa (Opsional)</span>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground bg-background px-1.5 py-0.5 rounded border">
+                                    Auto-generate jika kosong
+                                </span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                Jika dikosongkan, username otomatis menggunakan <strong>NISN</strong>, email <strong>{data.nisn ? `${data.nisn}@siswa.putraharapan.my.id` : '{NISN}@siswa.putraharapan.my.id'}</strong>, dan kata sandi otomatis dari <strong>Tanggal Lahir (DDMMYYYY)</strong>.
+                            </p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <Label htmlFor="siswa-username" className="text-xs">
+                                        Username Khusus (Opsional)
+                                    </Label>
+                                    <Input
+                                        id="siswa-username"
+                                        placeholder="Kosongkan = NISN"
+                                        value={data.username}
+                                        onChange={(e) => setData('username', e.target.value)}
+                                        className="text-xs h-8"
+                                    />
+                                    {errors.username && <p className="text-xs text-destructive">{errors.username}</p>}
+                                </div>
+                                <div className="space-y-1">
+                                    <Label htmlFor="siswa-password" className="text-xs">
+                                        Kata Sandi Khusus (Opsional)
+                                    </Label>
+                                    <Input
+                                        id="siswa-password"
+                                        type="password"
+                                        placeholder="Kosongkan = Tanggal Lahir"
+                                        value={data.password}
+                                        onChange={(e) => setData('password', e.target.value)}
+                                        className="text-xs h-8"
+                                    />
+                                    {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+                                </div>
+                            </div>
                         </div>
 
                         <DialogFooter className="pt-2">

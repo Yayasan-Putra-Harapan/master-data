@@ -57,6 +57,10 @@ class KaryawanRequest extends FormRequest
             'pendidikan_terakhir' => ['nullable', 'string', 'max:50'],
             'tanggal_masuk' => ['required', 'date'],
             'is_aktif' => ['boolean'],
+            'username' => ['nullable', 'string', 'max:50', 'alpha_dash', \Illuminate\Validation\Rule::unique('users', 'username')->ignore(
+                $karyawanId ? \App\Models\User::where('karyawan_id', $karyawanId)->value('id') : null
+            )],
+            'password' => $karyawanId ? ['nullable', 'string', 'min:6'] : ['required', 'string', 'min:6'],
             'foto' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
             'hapus_foto' => ['nullable', 'boolean'],
         ];
@@ -70,6 +74,9 @@ class KaryawanRequest extends FormRequest
             'nik.unique' => 'NIK sudah terdaftar pada karyawan lain.',
             'nuptk.digits' => 'NUPTK harus 16 digit angka.',
             'email.unique' => 'Alamat email sudah terdaftar.',
+            'password.required' => 'Kata sandi akun pegawai wajib diisi.',
+            'password.min' => 'Kata sandi minimal 6 karakter.',
+            'username.unique' => 'Username ini sudah dipakai akun pengguna lain.',
             'unit_id.exists' => 'Unit sekolah yang dipilih tidak valid atau tidak ditemukan.',
             'tanggal_lahir.before_or_equal' => 'Usia karyawan minimal harus 17 tahun.',
             'telepon.regex' => 'Format nomor telepon tidak valid (contoh: 081234567890).',

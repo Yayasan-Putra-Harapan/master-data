@@ -53,4 +53,9 @@ class Karyawan extends Model
     {
         return $this->belongsTo(Unit::class, 'unit_id');
     }
+
+    public function user(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(User::class, 'karyawan_id');
+    }
 }

@@ -36,4 +36,9 @@ class OrangTua extends Model
     {
         return $this->hasMany(Siswa::class, 'orang_tua_id');
     }
+
+    public function user(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(User::class, 'orang_tua_id');
+    }
 }

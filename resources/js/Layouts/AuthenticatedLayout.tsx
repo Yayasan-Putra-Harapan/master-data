@@ -136,6 +136,37 @@ export default function AuthenticatedLayout({
 
     const isSuperadmin = auth.user.role === 'superadmin';
 
+    const getRoleLabel = (role: string, unitKode?: string) => {
+        switch (role) {
+            case 'superadmin':
+                return 'Superadmin Yayasan';
+            case 'operator':
+                return unitKode ? `Operator ${unitKode}` : 'Operator Unit';
+            case 'guru':
+                return unitKode ? `Guru ${unitKode}` : 'Guru';
+            case 'staf':
+                return unitKode ? `Staf ${unitKode}` : 'Staf Unit';
+            case 'administrasi':
+                return unitKode ? `Administrasi ${unitKode}` : 'Staf Administrasi';
+            case 'kepala_sekolah':
+                return unitKode ? `Kepala Sekolah ${unitKode}` : 'Kepala Sekolah';
+            case 'keuangan':
+                return unitKode ? `Keuangan ${unitKode}` : 'Keuangan';
+            case 'siswa':
+                return unitKode ? `Siswa ${unitKode}` : 'Siswa';
+            case 'orang_tua':
+                return 'Orang Tua / Wali';
+            default:
+                return unitKode ? `${role} ${unitKode}` : role;
+        }
+    };
+
+    const getRoleShort = (role: string, unitKode?: string) => {
+        if (role === 'superadmin') return 'Admin';
+        if (unitKode) return unitKode;
+        return role;
+    };
+
     const apiNavigation = [
         {
             name: 'Akses API Token',
@@ -265,7 +296,7 @@ export default function AuthenticatedLayout({
                     <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
                         <div className="flex items-center justify-between mb-1">
                             <span className="font-semibold text-foreground">
-                                {isSuperadmin ? 'Superadmin' : `Operator ${auth.user.unit?.kode_unit || 'Unit'}`}
+                                {getRoleLabel(auth.user.role, auth.user.unit?.kode_unit)}
                             </span>
                             <Badge variant={isSuperadmin ? 'default' : 'secondary'} className="text-[9px] h-4 py-0">
                                 {isSuperadmin ? 'Global' : auth.user.unit?.kode_unit || 'Unit'}
@@ -301,7 +332,7 @@ export default function AuthenticatedLayout({
                                     <UserIcon className="h-4 w-4" />
                                     <span>{auth.user.name}</span>
                                     <Badge variant={isSuperadmin ? 'default' : 'secondary'} className="text-[10px] h-4 py-0 ml-1">
-                                        {isSuperadmin ? 'Admin' : auth.user.unit?.kode_unit || 'Operator'}
+                                        {getRoleShort(auth.user.role, auth.user.unit?.kode_unit)}
                                     </Badge>
                                     <ChevronDown className="h-3 w-3 opacity-60" />
                                 </Button>
@@ -312,7 +343,7 @@ export default function AuthenticatedLayout({
                                         <div className="flex items-center justify-between">
                                             <p className="text-xs text-muted-foreground">Signed in as</p>
                                             <Badge variant={isSuperadmin ? 'default' : 'secondary'} className="text-[10px] h-4 py-0">
-                                                {isSuperadmin ? 'Superadmin Yayasan' : `Operator ${auth.user.unit?.kode_unit || ''}`}
+                                                {getRoleLabel(auth.user.role, auth.user.unit?.kode_unit)}
                                             </Badge>
                                         </div>
                                         <p className="text-xs font-semibold leading-none truncate">{auth.user.email}</p>

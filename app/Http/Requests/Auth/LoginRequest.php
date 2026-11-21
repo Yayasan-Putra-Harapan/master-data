@@ -28,7 +28,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email'],
+            'email' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -42,7 +42,12 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        $loginInput = $this->string('email')->toString();
+        $user = \App\Models\User::where('email', $loginInput)
+            ->orWhere('username', $loginInput)
+            ->first();
+
+        if (! $user || ! \Illuminate\Support\Facades\Hash::check($this->input('password'), $user->password)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -50,6 +55,19 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        if (! $user->is_aktif) {
+            throw ValidationException::withMessages([
+                'email' => 'Akun pengguna ini berstatus non-aktif. Silakan hubungi administrator.',
+            ]);
+        }
+
+        if (! in_array($user->role, ['superadmin', 'operator'])) {
+            throw ValidationException::withMessages([
+                'email' => "Akun Anda bertipe '{$user->role}'. Web Master Data khusus untuk Administrator dan Operator Yayasan. Silakan gunakan akun Anda di aplikasi satelit (SIAKAD/LMS/Portal).",
+            ]);
+        }
+
+        Auth::login($user, $this->boolean('remember'));
         RateLimiter::clear($this->throttleKey());
     }
 

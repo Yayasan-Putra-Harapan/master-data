@@ -11,7 +11,10 @@ class KaryawanService
 {
     public function getPaginated(array $filters = [], int $perPage = 10): LengthAwarePaginator
     {
-        $query = Karyawan::query()->with('unit');
+        $query = Karyawan::query()->with([
+            'unit',
+            'user:id,karyawan_id,username,email,is_aktif',
+        ]);
 
         if (!empty($filters['search'])) {
             $search = $filters['search'];
@@ -40,11 +43,17 @@ class KaryawanService
 
     public function create(array $data): Karyawan
     {
+        $customUsername = $data['username'] ?? null;
+        $customPassword = $data['password'] ?? null;
+        unset($data['username'], $data['password']);
+
         if (isset($data['foto']) && $data['foto'] instanceof UploadedFile) {
             $data['foto'] = $data['foto']->store('karyawan', 'public');
         }
 
         $karyawan = Karyawan::create($data);
+
+        app(UserProvisioningService::class)->syncKaryawanUser($karyawan, $customUsername, $customPassword);
 
         ActivityLogger::log('create', "Menambahkan pegawai/guru: {$karyawan->nama} (NIK: {$karyawan->nik})", $karyawan, [
             'role' => $karyawan->role,
@@ -56,6 +65,10 @@ class KaryawanService
 
     public function update(Karyawan $karyawan, array $data): Karyawan
     {
+        $customUsername = $data['username'] ?? null;
+        $customPassword = $data['password'] ?? null;
+        unset($data['username'], $data['password']);
+
         if (isset($data['foto']) && $data['foto'] instanceof UploadedFile) {
             if ($karyawan->foto && Storage::disk('public')->exists($karyawan->foto)) {
                 Storage::disk('public')->delete($karyawan->foto);
@@ -69,6 +82,8 @@ class KaryawanService
         }
 
         $karyawan->update($data);
+
+        app(UserProvisioningService::class)->syncKaryawanUser($karyawan, $customUsername, $customPassword);
 
         ActivityLogger::log('update', "Memperbarui data pegawai/guru: {$karyawan->nama} (NIK: {$karyawan->nik})", $karyawan);
 
