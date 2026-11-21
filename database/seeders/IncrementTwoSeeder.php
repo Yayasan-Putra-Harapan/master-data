@@ -42,7 +42,7 @@ class IncrementTwoSeeder extends Seeder
                 'semester' => 'ganjil',
                 'tanggal_mulai' => '2025-07-14',
                 'tanggal_selesai' => '2025-12-19',
-                'is_aktif' => true,
+                'is_aktif' => false,
             ],
             [
                 'kode' => 'TA-2025/2026-GENAP',
@@ -52,10 +52,27 @@ class IncrementTwoSeeder extends Seeder
                 'tanggal_selesai' => '2026-06-19',
                 'is_aktif' => false,
             ],
+            [
+                'kode' => 'TA-2026/2027-GANJIL',
+                'nama' => 'Tahun Ajaran 2026/2027 Semester Ganjil',
+                'semester' => 'ganjil',
+                'tanggal_mulai' => '2026-07-13',
+                'tanggal_selesai' => '2026-12-18',
+                'is_aktif' => true,
+            ],
+            [
+                'kode' => 'TA-2026/2027-GENAP',
+                'nama' => 'Tahun Ajaran 2026/2027 Semester Genap',
+                'semester' => 'genap',
+                'tanggal_mulai' => '2027-01-04',
+                'tanggal_selesai' => '2027-06-18',
+                'is_aktif' => false,
+            ],
         ];
 
         foreach ($taList as $ta) {
-            TahunAjaran::firstOrCreate(['kode' => $ta['kode']], $ta);
+            // updateOrCreate agar status aktif selalu konsisten saat seeder dijalankan ulang.
+            TahunAjaran::updateOrCreate(['kode' => $ta['kode']], $ta);
         }
 
         $activeTA = TahunAjaran::where('is_aktif', true)->first() ?? TahunAjaran::first();
@@ -128,32 +145,36 @@ class IncrementTwoSeeder extends Seeder
             }
         }
 
-        // 4. Kelas per Unit
-        foreach ($units as $unit) {
-            $guruList = Karyawan::where('unit_id', $unit->id)->where('role', 'guru')->get();
-            $tingkatOptions = match ($unit->jenjang) {
-                'PG' => [1],
-                'TK' => [1, 2],
-                'SD' => [1, 2, 3, 4, 5, 6],
-                'SMP' => [7, 8, 9],
-                'SMA', 'BOARDING' => [10, 11, 12],
-                default => [1],
-            };
+        // 4. Kelas (Rombel) per Unit per Tahun Ajaran
+        foreach (TahunAjaran::orderBy('tanggal_mulai')->get() as $ta) {
+            $taYear = $ta->tanggal_mulai->format('Y');
 
-            foreach ($tingkatOptions as $tingkat) {
-                foreach (['A', 'B'] as $paralel) {
-                    $wali = $guruList->isNotEmpty() ? $guruList->random()->id : null;
-                    Kelas::firstOrCreate(
-                        ['kode_kelas' => "KLS-{$unit->kode_unit}-{$tingkat}{$paralel}"],
-                        [
-                            'nama_kelas' => "Kelas {$tingkat}{$paralel} - {$unit->nama_unit}",
-                            'tingkat' => $tingkat,
-                            'unit_id' => $unit->id,
-                            'tahun_ajaran_id' => $activeTA->id,
-                            'wali_kelas_id' => $wali,
-                            'kapasitas' => 30,
-                        ]
-                    );
+            foreach ($units as $unit) {
+                $guruList = Karyawan::where('unit_id', $unit->id)->where('role', 'guru')->get();
+                $tingkatOptions = match ($unit->jenjang) {
+                    'PG' => [1],
+                    'TK' => [1, 2],
+                    'SD' => [1, 2, 3, 4, 5, 6],
+                    'SMP' => [7, 8, 9],
+                    'SMA', 'BOARDING' => [10, 11, 12],
+                    default => [1],
+                };
+
+                foreach ($tingkatOptions as $tingkat) {
+                    foreach (['A', 'B'] as $paralel) {
+                        $wali = $guruList->isNotEmpty() ? $guruList->random()->id : null;
+                        Kelas::firstOrCreate(
+                            ['kode_kelas' => "KLS-{$unit->kode_unit}-{$tingkat}{$paralel}-{$taYear}"],
+                            [
+                                'nama_kelas' => "Kelas {$tingkat}{$paralel} - {$unit->nama_unit} ({$taYear})",
+                                'tingkat' => $tingkat,
+                                'unit_id' => $unit->id,
+                                'tahun_ajaran_id' => $ta->id,
+                                'wali_kelas_id' => $wali,
+                                'kapasitas' => 30,
+                            ]
+                        );
+                    }
                 }
             }
         }
